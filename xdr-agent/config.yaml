@@ -1,0 +1,20 @@
+agent:
+  agent_id: AGENT-A94D34BA4FBD4E0C
+  server_url: http://localhost:8080
+collector:
+  asset_interval: 300
+  login_interval: 60
+  network_interval: 60
+  process_interval: 60
+comm:
+  cache_days: 7
+  compress: true
+  retry_delay: 5
+  retry_times: 3
+heartbeat:
+  interval: 300
+logging:
+  backup_count: 5
+  file: logs/agent.log
+  level: INFO
+  max_bytes: 10485760

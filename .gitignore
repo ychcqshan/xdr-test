@@ -1,0 +1,23 @@
+# Maven
+target/
+*.jar
+*.class
+
+# Node / Vue
+node_modules/
+dist/
+npm-debug.log*
+
+# Python / Agent
+*$py.class
+xdr-agent/cache.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
