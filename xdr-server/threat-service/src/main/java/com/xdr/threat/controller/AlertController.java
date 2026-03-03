@@ -43,13 +43,21 @@ public class AlertController {
                 id,
                 body.get("status"),
                 body.get("operator"),
-                body.get("comment")
-        ));
+                body.get("comment")));
     }
 
     /** 告警统计(仪表盘) */
     @GetMapping("/stats")
     public ApiResponse<Map<String, Object>> getStats() {
         return ApiResponse.ok(alertService.getStats());
+    }
+
+    /** 执行针对性响应动作 (Phase 2) */
+    @PostMapping("/{id}/respond")
+    public ApiResponse<Void> executeResponse(
+            @PathVariable String id,
+            @RequestParam String operator) {
+        alertService.executeResponse(id, operator);
+        return ApiResponse.ok();
     }
 }

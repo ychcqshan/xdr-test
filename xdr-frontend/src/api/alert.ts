@@ -12,6 +12,10 @@ export function updateAlertStatus(id: string, data: any) {
     return request.put(`/alerts/${id}/status`, data)
 }
 
+export function respondToAlert(id: string, operator: string) {
+    return request.post(`/alerts/${id}/respond`, null, { params: { operator } })
+}
+
 export function getAlertStats() {
     return request.get('/alerts/stats')
 }

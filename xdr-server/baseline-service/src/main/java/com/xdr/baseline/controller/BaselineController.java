@@ -65,4 +65,23 @@ public class BaselineController {
     public ApiResponse<List<BaselineItem>> getItems(@PathVariable String baselineId) {
         return ApiResponse.ok(baselineService.getBaselineItems(baselineId));
     }
+
+    /** S-BL-005: 复制基线 (Phase 2) */
+    @PostMapping("/copy")
+    public ApiResponse<Baseline> copyBaseline(
+            @RequestParam String sourceAgentId,
+            @RequestParam String targetAgentId,
+            @RequestParam String type) {
+        return ApiResponse.ok(baselineService.copyBaseline(sourceAgentId, targetAgentId, type));
+    }
+
+    /** S-BL-006: 手动维护基线条目 (Phase 2) */
+    @PostMapping("/{agentId}/{type}/items/manual")
+    public ApiResponse<Void> addManualItem(
+            @PathVariable String agentId,
+            @PathVariable String type,
+            @RequestBody Map<String, Object> itemData) {
+        baselineService.addManualItem(agentId, type, itemData);
+        return ApiResponse.ok();
+    }
 }

@@ -54,7 +54,6 @@ body {
 
 /* 主内容区 */
 .main-container {
-  margin-left: var(--xdr-sidebar-width);
   min-height: 100vh;
 }
 
@@ -135,10 +134,23 @@ body {
 }
 
 /* 告警级别标签色 */
-.level-critical { color: #f56c6c; font-weight: 700; }
-.level-high { color: #e6a23c; font-weight: 600; }
-.level-medium { color: #409eff; }
-.level-low { color: #909399; }
+.level-critical {
+  color: #f56c6c;
+  font-weight: 700;
+}
+
+.level-high {
+  color: #e6a23c;
+  font-weight: 600;
+}
+
+.level-medium {
+  color: #409eff;
+}
+
+.level-low {
+  color: #909399;
+}
 
 /* 登录页 */
 .login-page {

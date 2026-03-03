@@ -8,6 +8,14 @@ export function getAssetDetail(id: string) {
     return request.get(`/assets/${id}`)
 }
 
+export function getAssetDetails(agentId: string) {
+    return request.get(`/assets/${agentId}/details`)
+}
+
+export function getTopology() {
+    return request.get('/assets/topology')
+}
+
 export function getAssetStats() {
     return request.get('/assets/stats')
 }

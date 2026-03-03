@@ -1,14 +1,15 @@
 <template>
-  <div>
-    <!-- 搜索栏 -->
-    <div class="table-card" style="margin-bottom: 20px;">
+  <div class="animate-slide-up">
+    <!-- 搜索栏 (玻璃拟态) -->
+    <div class="table-card glass-card" style="margin-bottom: 24px;">
       <el-form :inline="true" @submit.prevent="loadData">
         <el-form-item label="关键词">
-          <el-input v-model="filters.keyword" placeholder="主机名/IP/AgentID" clearable style="width:200px;" />
+          <el-input v-model="filters.keyword" placeholder="主机名/IP/AgentID" clearable style="width:220px;" />
         </el-form-item>
         <el-form-item label="操作系统">
-          <el-select v-model="filters.osType" placeholder="全部" clearable style="width:130px;">
+          <el-select v-model="filters.osType" placeholder="全部" clearable style="width:140px;">
             <el-option label="Windows" value="WINDOWS" />
+            <el-option label="Linux" value="LINUX" />
             <el-option label="Kylin" value="KYLIN" />
             <el-option label="UOS" value="UOS" />
           </el-select>
@@ -20,36 +21,58 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="loadData">搜索</el-button>
+          <el-button type="primary" @click="loadData">
+            <el-icon><Search /></el-icon> 搜索
+          </el-button>
           <el-button @click="resetFilters">重置</el-button>
         </el-form-item>
       </el-form>
     </div>
 
-    <!-- 资产表格 -->
-    <div class="table-card">
+    <!-- 资产表格 (深色玻璃) -->
+    <div class="table-card glass-card">
       <div class="card-header">
-        <h3>资产列表</h3>
-        <span style="color: #909399; font-size: 13px;">共 {{ total }} 项</span>
+        <h3>资产库清单</h3>
+        <span class="count-badge">Total {{ total }} Items</span>
       </div>
-      <el-table :data="assets" stripe v-loading="loading" @row-click="showDetail">
-        <el-table-column prop="hostname" label="主机名" min-width="140" />
+      
+      <el-table 
+        :data="assets" 
+        stripe 
+        v-loading="loading" 
+        @row-click="showDetail"
+        class="premium-table"
+      >
+        <el-table-column prop="hostname" label="主机名" min-width="160">
+          <template #default="{ row }">
+            <div class="host-cell">
+              <el-icon :color="row.status === 'ONLINE' ? '#10b981' : '#94a3b8'"><Platform /></el-icon>
+              <span>{{ row.hostname }}</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="ipAddress" label="IP地址" width="140" />
-        <el-table-column prop="osType" label="操作系统" width="120" />
+        <el-table-column prop="osType" label="操作系统" width="140">
+          <template #default="{ row }">
+            <el-tag size="small" effect="plain" type="info">{{ row.osType }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="agentVersion" label="Agent版本" width="110" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'ONLINE' ? 'success' : 'info'" size="small">
-              {{ row.status === 'ONLINE' ? '在线' : '离线' }}
-            </el-tag>
+            <div class="status-dot-wrapper">
+              <span class="status-dot" :class="row.status.toLowerCase()"></span>
+              <span>{{ row.status === 'ONLINE' ? '在线' : '离线' }}</span>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column prop="riskScore" label="风险评分" width="100">
+        <el-table-column prop="riskScore" label="风险评分" width="120">
           <template #default="{ row }">
             <el-progress
               :percentage="row.riskScore || 0"
-              :color="row.riskScore > 70 ? '#f56c6c' : row.riskScore > 40 ? '#e6a23c' : '#67c23a'"
-              :stroke-width="8"
+              :color="row.riskScore > 70 ? '#f43f5e' : row.riskScore > 40 ? '#f59e0b' : '#10b981'"
+              :stroke-width="6"
+              :show-text="false"
               style="width: 80px;"
             />
           </template>
@@ -63,46 +86,25 @@
         :total="total"
         :page-sizes="[20, 50, 100]"
         layout="total, sizes, prev, pager, next"
-        style="margin-top: 16px; justify-content: flex-end;"
+        class="premium-pagination"
         @change="loadData"
       />
     </div>
-
-    <!-- 资产详情抽屉 -->
-    <el-drawer v-model="drawerVisible" title="资产详情" size="450px">
-      <template v-if="currentAsset">
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="Agent ID">{{ currentAsset.agentId }}</el-descriptions-item>
-          <el-descriptions-item label="主机名">{{ currentAsset.hostname }}</el-descriptions-item>
-          <el-descriptions-item label="IP">{{ currentAsset.ipAddress }}</el-descriptions-item>
-          <el-descriptions-item label="操作系统">{{ currentAsset.osType }} {{ currentAsset.osVersion }}</el-descriptions-item>
-          <el-descriptions-item label="CPU">{{ currentAsset.cpuModel }} ({{ currentAsset.cpuArch }})</el-descriptions-item>
-          <el-descriptions-item label="内存">{{ formatBytes(currentAsset.memoryTotal) }}</el-descriptions-item>
-          <el-descriptions-item label="磁盘">{{ formatBytes(currentAsset.diskTotal) }}</el-descriptions-item>
-          <el-descriptions-item label="Agent版本">{{ currentAsset.agentVersion }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="currentAsset.status === 'ONLINE' ? 'success' : 'info'">{{ currentAsset.status }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="风险评分">{{ currentAsset.riskScore }}</el-descriptions-item>
-          <el-descriptions-item label="最后心跳">{{ currentAsset.lastHeartbeat }}</el-descriptions-item>
-        </el-descriptions>
-      </template>
-    </el-drawer>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { getAssets, getAssetDetail } from '@/api/asset'
+import { useRouter } from 'vue-router'
+import { getAssets } from '@/api/asset'
+import { Platform, Search } from '@element-plus/icons-vue'
 
+const router = useRouter()
 const assets = ref<any[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
 const loading = ref(false)
-const drawerVisible = ref(false)
-const currentAsset = ref<any>(null)
-
 const filters = reactive({ keyword: '', osType: '', status: '' })
 
 onMounted(() => loadData())
@@ -113,7 +115,7 @@ async function loadData() {
     const res = await getAssets({ page: page.value, size: pageSize.value, ...filters })
     assets.value = res.data?.records || []
     total.value = res.data?.total || 0
-  } catch { /* empty */ } finally {
+  } catch { /* error handled by interceptor */ } finally {
     loading.value = false
   }
 }
@@ -125,19 +127,51 @@ function resetFilters() {
   loadData()
 }
 
-async function showDetail(row: any) {
-  try {
-    const res = await getAssetDetail(row.id)
-    currentAsset.value = res.data
-  } catch {
-    currentAsset.value = row
-  }
-  drawerVisible.value = true
-}
-
-function formatBytes(bytes: number) {
-  if (!bytes) return '-'
-  const gb = bytes / (1024 * 1024 * 1024)
-  return gb.toFixed(1) + ' GB'
+function showDetail(row: any) {
+  router.push({
+    name: 'AssetDetail',
+    params: { id: row.id },
+    query: { agentId: row.agentId }
+  })
 }
 </script>
+
+<style scoped>
+.count-badge {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.host-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.status-dot-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.status-dot.online { background-color: #10b981; box-shadow: 0 0 8px #10b981; }
+.status-dot.offline { background-color: #94a3b8; }
+
+.premium-table :deep(.el-table__row) {
+  cursor: pointer;
+}
+
+.premium-pagination {
+  margin-top: 24px;
+  justify-content: flex-end;
+}
+</style>

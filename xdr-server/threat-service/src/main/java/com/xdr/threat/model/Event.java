@@ -7,11 +7,11 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("event")
+@TableName("`event`")
 public class Event extends BaseEntity {
     private String agentId;
-    private String eventType;      // PROCESS/NETWORK/USB/LOGIN/ASSET/BASELINE_DIFF
-    private String eventData;      // JSON
-    private String priority;       // CRITICAL/HIGH/LOW
-    private Integer processed;     // 0-未处理 1-已处理
+    private String eventType; // PROCESS/NETWORK/USB/LOGIN/ASSET/BASELINE_DIFF
+    private String eventData; // JSON
+    private String priority; // CRITICAL/HIGH/LOW
+    private Integer processed; // 0-未处理 1-已处理
 }

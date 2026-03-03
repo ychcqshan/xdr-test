@@ -26,6 +26,12 @@ const routes: RouteRecordRaw[] = [
                 meta: { title: '资产管理', icon: 'Platform' },
             },
             {
+                path: 'assets/:id',
+                name: 'AssetDetail',
+                component: () => import('@/views/asset/AssetDetailView.vue'),
+                meta: { title: '资产详情', icon: 'Platform', hidden: true },
+            },
+            {
                 path: 'alerts',
                 name: 'Alerts',
                 component: () => import('@/views/threat/AlertListView.vue'),
@@ -72,12 +78,10 @@ const router = createRouter({
 
 
 // 路由守卫
-router.beforeEach((to, _from, next) => {
+router.beforeEach((to) => {
     const token = localStorage.getItem('accessToken')
     if (to.meta.requiresAuth !== false && !token) {
-        next('/login')
-    } else {
-        next()
+        return '/login'
     }
 })
 

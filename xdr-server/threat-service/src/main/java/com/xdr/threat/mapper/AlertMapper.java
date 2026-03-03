@@ -11,12 +11,12 @@ import java.util.Map;
 @Mapper
 public interface AlertMapper extends BaseMapper<Alert> {
 
-    @Select("SELECT level, COUNT(*) as count FROM alert WHERE deleted=0 GROUP BY level")
+    @Select("SELECT level, COUNT(*) as count FROM `alert` WHERE deleted=0 GROUP BY level")
     List<Map<String, Object>> countByLevel();
 
-    @Select("SELECT status, COUNT(*) as count FROM alert WHERE deleted=0 GROUP BY status")
+    @Select("SELECT status, COUNT(*) as count FROM `alert` WHERE deleted=0 GROUP BY status")
     List<Map<String, Object>> countByStatus();
 
-    @Select("SELECT DATE(created_at) as date, COUNT(*) as count FROM alert WHERE deleted=0 AND created_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY) GROUP BY DATE(created_at) ORDER BY date")
+    @Select("SELECT DATE(created_at) as date, COUNT(*) as count FROM `alert` WHERE deleted=0 AND created_at >= DATE_SUB(NOW(), INTERVAL #{days} DAY) GROUP BY DATE(created_at) ORDER BY date")
     List<Map<String, Object>> countByDay(int days);
 }

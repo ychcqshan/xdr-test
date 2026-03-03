@@ -98,7 +98,7 @@ class CommManager:
             'eventData': event_data,
             'priority': priority,
         }
-        return self.post('/api/v1/events', data)
+        return self.post('/api/v1/events', data, compress=True)
 
     def flush_cache(self):
         """恢复网络后补传缓存数据"""

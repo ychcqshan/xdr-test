@@ -3,3 +3,6 @@ requests>=2.31.0
 pyyaml>=6.0
 apscheduler>=3.10.0
 cryptography>=41.0.0
+watchdog
+scapy
+pywin32; sys_platform == 'win32'

@@ -8,7 +8,10 @@ $services = @(
     @{ name = "auth-service"; path = "auth-service"; port = 8081 },
     @{ name = "asset-service"; path = "asset-service"; port = 8082 },
     @{ name = "baseline-service"; path = "baseline-service"; port = 8083 },
-    @{ name = "threat-service"; path = "threat-service"; port = 8084 }
+    @{ name = "threat-service"; path = "threat-service"; port = 8084 },
+    @{ name = "policy-service"; path = "policy-service"; port = 8085 },
+    @{ name = "upgrade-service"; path = "upgrade-service"; port = 8086 },
+    @{ name = "compliance-service"; path = "compliance-service"; port = 8087 }
 )
 
 Write-Host "--- XDR Backend Startup Program ---" -ForegroundColor Cyan

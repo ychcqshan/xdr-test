@@ -1,5 +1,6 @@
 package com.xdr.asset.controller;
 
+import com.xdr.asset.dto.AssetDetailDTO;
 import com.xdr.asset.model.Asset;
 import com.xdr.asset.model.UserInfo;
 import com.xdr.asset.service.AssetService;
@@ -16,6 +17,7 @@ import java.util.Map;
 public class AssetController {
 
     private final AssetService assetService;
+    private final com.xdr.asset.service.TopologyService topologyService;
 
     /** S-ASSET-004: 资产列表(分页+搜索) */
     @GetMapping
@@ -35,10 +37,22 @@ public class AssetController {
         return ApiResponse.ok(assetService.getAssetDetail(id));
     }
 
+    /** S-ASSET-002: 资产聚合详情 (Phase 2) */
+    @GetMapping("/{agentId}/details")
+    public ApiResponse<AssetDetailDTO> getAssetDetails(@PathVariable String agentId) {
+        return ApiResponse.ok(assetService.getAggregatedAssetDetail(agentId));
+    }
+
     /** 仪表盘统计 */
     @GetMapping("/stats")
     public ApiResponse<Map<String, Object>> getStats() {
         return ApiResponse.ok(assetService.getStats());
+    }
+
+    /** 网络拓扑图 (Phase 2) */
+    @GetMapping("/topology")
+    public ApiResponse<com.xdr.asset.dto.GraphDTO> getTopology() {
+        return ApiResponse.ok(topologyService.getNetworkTopology());
     }
 
     /** S-ASSET-008: 用户信息上报 */

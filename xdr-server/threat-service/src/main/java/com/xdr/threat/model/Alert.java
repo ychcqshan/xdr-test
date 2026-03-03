@@ -9,18 +9,20 @@ import java.time.LocalDateTime;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("alert")
+@TableName("`alert`")
 public class Alert extends BaseEntity {
     private String agentId;
-    private String level;          // CRITICAL / HIGH / MEDIUM / LOW
-    private String status;         // NEW / ACKNOWLEDGED / RESOLVED / IGNORED
-    private String threatType;     // RANSOMWARE / LATERAL_MOVEMENT / FILELESS / BASELINE_VIOLATION
+    private String level; // CRITICAL / HIGH / MEDIUM / LOW
+    private String status; // NEW / ACKNOWLEDGED / RESOLVED / IGNORED
+    private String threatType; // RANSOMWARE / LATERAL_MOVEMENT / FILELESS / BASELINE_VIOLATION
     private String title;
     private String description;
-    private String rawEvent;       // JSON
+    private String rawEvent; // JSON
     private String attackChainId;
     private Integer priority;
     private LocalDateTime resolvedAt;
     private String resolvedBy;
     private String resolveComment;
+    private String responseStatus; // PENDING / EXECUTED / FAILED / CANCELED
+    private String responseAction; // ISOLATE / TERMINATE_PROCESS / DELETE_FILE
 }
