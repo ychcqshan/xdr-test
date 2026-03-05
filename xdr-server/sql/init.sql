@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
 );
 
 -- 默认管理员 (密码: admin123)
-INSERT INTO sys_user (id, username, password, real_name, role, status, deleted)
+INSERT IGNORE INTO sys_user (id, username, password, real_name, role, status, deleted)
 VALUES (UUID(), 'admin', '$2a$10$N.ZOn9MHSbEU0Oq6lZXaF.kXBqb0h.VDd7jqDeYRcP1XlVLYN9Cku', '系统管理员', 'ADMIN', 1, 0);
 
 -- =============================================
@@ -149,4 +149,113 @@ CREATE TABLE IF NOT EXISTS event (
     INDEX idx_agent_id (agent_id),
     INDEX idx_event_type (event_type),
     INDEX idx_created_at (created_at)
+);
+
+CREATE TABLE IF NOT EXISTS host_asset (
+    id VARCHAR(36) PRIMARY KEY,
+    agent_id VARCHAR(50) NOT NULL,
+    asset_type VARCHAR(20) NOT NULL COMMENT 'PROCESS, NETWORK',
+    asset_id VARCHAR(255) NOT NULL COMMENT 'Unique key (e.g., pid|name|createTime)',
+    asset_data JSON NOT NULL COMMENT 'Full JSON details',
+    deleted INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_agent_id (agent_id),
+    INDEX idx_asset_type (asset_type),
+    UNIQUE INDEX idx_agent_asset (agent_id, asset_type, asset_id)
+);
+
+-- =============================================
+-- 策略服务数据库
+CREATE DATABASE IF NOT EXISTS xdr_policy DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE xdr_policy;
+
+CREATE TABLE IF NOT EXISTS policy (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    scope VARCHAR(20) NOT NULL COMMENT 'GLOBAL, GROUP, AGENT',
+    target_id VARCHAR(36) COMMENT 'groupId or agentId',
+    content TEXT NOT NULL COMMENT 'JSON string of policy details',
+    version INT NOT NULL DEFAULT 1,
+    status INT NOT NULL DEFAULT 1 COMMENT '0-INACTIVE 1-ACTIVE',
+    deleted INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS response_command (
+    id VARCHAR(36) PRIMARY KEY,
+    agent_id VARCHAR(50) NOT NULL,
+    command_type VARCHAR(50) NOT NULL COMMENT 'KILL_PROCESS, DELETE_FILE, ISOLATE',
+    command_data TEXT COMMENT 'JSON string',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, SENT, EXECUTED, FAILED',
+    error_message TEXT,
+    deleted INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_agent_id (agent_id),
+    INDEX idx_status (status)
+);
+
+-- =============================================
+-- 升级服务数据库
+CREATE DATABASE IF NOT EXISTS xdr_upgrade DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE xdr_upgrade;
+
+CREATE TABLE IF NOT EXISTS upgrade_package (
+    id VARCHAR(36) PRIMARY KEY,
+    version VARCHAR(20) NOT NULL,
+    platform VARCHAR(20) NOT NULL COMMENT 'windows, linux, darwin',
+    arch VARCHAR(20) NOT NULL COMMENT 'x86_64, arm64',
+    file_name VARCHAR(255) NOT NULL,
+    checksum VARCHAR(64) NOT NULL COMMENT 'SHA-256',
+    file_size BIGINT NOT NULL,
+    release_notes TEXT,
+    deleted INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS upgrade_task (
+    id VARCHAR(36) PRIMARY KEY,
+    agent_id VARCHAR(50) NOT NULL,
+    package_id VARCHAR(36) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING, DOWNLOADING, INSTALLING, SUCCESS, FAILED',
+    error_message TEXT,
+    progress INT DEFAULT 0 COMMENT '0-100',
+    deleted INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_agent_id (agent_id),
+    INDEX idx_status (status)
+);
+
+-- =============================================
+-- 合规服务数据库
+CREATE DATABASE IF NOT EXISTS xdr_compliance DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE xdr_compliance;
+
+CREATE TABLE IF NOT EXISTS compliance_standard (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    version VARCHAR(20),
+    content TEXT NOT NULL COMMENT 'JSON definition of check items',
+    deleted INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS compliance_result (
+    id VARCHAR(36) PRIMARY KEY,
+    agent_id VARCHAR(50) NOT NULL,
+    standard_id VARCHAR(36) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PASS' COMMENT 'PASS, FAIL, WARNING',
+    details TEXT COMMENT 'JSON results of individual check items',
+    score INT DEFAULT 0,
+    deleted INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_agent_id (agent_id),
+    INDEX idx_status (status)
 );

@@ -1,5 +1,6 @@
 agent:
-  agent_id: AGENT-A94D34BA4FBD4E0C
+  agent_id: AGENT-B2A4645C88F44B5C
+  re_register: false
   server_url: http://localhost:8080
 collector:
   asset_interval: 300
@@ -16,5 +17,5 @@ heartbeat:
 logging:
   backup_count: 5
   file: logs/agent.log
-  level: INFO
+  level: DEBUG
   max_bytes: 10485760

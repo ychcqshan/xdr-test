@@ -1,26 +1,35 @@
 <template>
   <div class="animate-slide-up">
-    <div class="card-header glass-card" style="padding: 24px; margin-bottom: 24px;">
-      <div class="titles">
-        <h3><el-icon><SetUp /></el-icon> 防护策略矩阵</h3>
-        <p class="desc">分层策略体系：全局基准 -> 组织分组 -> 单机定制</p>
+    <div class="bento-card page-header-elite mb-10">
+      <div class="header-main">
+        <div class="title-section">
+          <div class="title-with-dot">
+            <span class="pulse-dot active"></span>
+            <h3>防护策略矩阵</h3>
+          </div>
+          <p class="subtitle-elite">分层策略体系：全局基准 -> 组织分组 -> 单机定制</p>
+        </div>
+        <div class="header-actions">
+          <el-button type="primary" class="elite-button shadow-btn" @click="handleAdd">
+            <el-icon><Plus /></el-icon> 新增策略
+          </el-button>
+        </div>
       </div>
-      <el-button type="primary" @click="handleAdd">
-        <el-icon><Plus /></el-icon> 新增策略
-      </el-button>
     </div>
 
-    <div class="table-card glass-card">
+    <div class="bento-card table-panel-elite">
       <el-table :data="policies" stripe v-loading="loading">
         <el-table-column prop="name" label="策略名称" min-width="180" />
         <el-table-column prop="level" label="生效层级" width="120">
           <template #default="{ row }">
-            <el-tag :type="getLevelTag(row.level)" effect="dark">{{ row.level }}</el-tag>
+            <el-tag :type="getLevelTag(row.level)" effect="plain" class="elite-tag">
+              {{ row.level === 'GLOBAL' ? '全局基准' : (row.level === 'GROUP' ? '组织分组' : '单机定制') }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="targetId" label="绑定对象" min-width="150">
           <template #default="{ row }">
-            {{ row.level === 'GLOBAL' ? '全网生效' : row.targetId }}
+            {{ row.level === 'GLOBAL' ? '全网生效' : (row.level === 'GROUP' ? '指定分组' : '单台终端') }}
           </template>
         </el-table-column>
         <el-table-column prop="updatedAt" label="最后修改" width="180" />
@@ -46,12 +55,12 @@
             <el-option label="单机定制" value="AGENT" />
           </el-select>
         </el-form-item>
-        <el-form-item label="防护设置 (JSON)">
+        <el-form-item label="防护设置说明">
           <el-input 
             type="textarea" 
             v-model="form.content" 
             :rows="8" 
-            placeholder='{"firewall": "on", "usb_allow": ["trust-link"]}' 
+            placeholder='例如：{"firewall": "on", "usb_allow": ["trust-link"]}' 
           />
         </el-form-item>
       </el-form>

@@ -98,7 +98,7 @@ class CommManager:
             'eventData': event_data,
             'priority': priority,
         }
-        return self.post('/api/v1/events', data, compress=True)
+        return self.post('/api/v1/events', data, compress=False)
 
     def flush_cache(self):
         """恢复网络后补传缓存数据"""
@@ -127,6 +127,32 @@ class CommManager:
             logger.info(f"补传缓存数据 {len(success_ids)} 条")
 
         conn.close()
+
+    def get_pending_commands(self) -> list:
+        """获取待执行的处置指令"""
+        endpoint = f"/api/v1/policies/commands/pending/{get_agent_id()}"
+        resp = self.get(endpoint)
+        if resp and resp.get('code') == 200:
+            return resp.get('data', [])
+        return []
+
+    def update_command_status(self, command_id: str, status: str, error: str = None):
+        """反馈指令执行结果"""
+        endpoint = f"/api/v1/policies/commands/{command_id}/status"
+        params = {'status': status}
+        if error:
+            params['error'] = error
+        
+        try:
+            resp = self.session.put(
+                f"{self.base_url}{endpoint}",
+                params=params,
+                timeout=10
+            )
+            return resp.status_code == 200
+        except Exception as e:
+            logger.error(f"反馈指令状态失败: {e}")
+            return False
 
     def _cache_event(self, endpoint: str, payload: str):
         """缓存事件到本地SQLite"""

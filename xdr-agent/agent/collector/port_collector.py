@@ -1,11 +1,17 @@
+import logging
 import psutil
 from datetime import datetime
 from .base import BaseCollector
+
+logger = logging.getLogger(__name__)
 
 class PortCollector(BaseCollector):
     """
     采集系统端口开放情况并关联进程名
     """
+    def name(self) -> str:
+        return "NETWORK" # Align with backend AssetType
+
     def collect(self):
         ports = []
         try:
@@ -33,6 +39,10 @@ class PortCollector(BaseCollector):
         except Exception:
             pass
             
+        logger.info(f"[PortCollector] 采集到 {len(ports)} 条端口记录")
+        for i, p in enumerate(ports[:10]):
+            logger.info(f"  [{i+1}] {p.get('protocol')} {p.get('local_addr')} -> {p.get('remote_addr')} ({p.get('process_name')}) [{p.get('status')}]")
+
         return {
             "ports": ports,
             "timestamp": datetime.now().isoformat()

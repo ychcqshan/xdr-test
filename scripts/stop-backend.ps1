@@ -8,7 +8,10 @@ $services = @(
     @{ name = "auth-service"; port = 8081 },
     @{ name = "asset-service"; port = 8082 },
     @{ name = "baseline-service"; port = 8083 },
-    @{ name = "threat-service"; port = 8084 }
+    @{ name = "threat-service"; port = 8084 },
+    @{ name = "policy-service"; port = 8085 },
+    @{ name = "upgrade-service"; port = 8086 },
+    @{ name = "compliance-service"; port = 8087 }
 )
 
 foreach ($svc in $services) {

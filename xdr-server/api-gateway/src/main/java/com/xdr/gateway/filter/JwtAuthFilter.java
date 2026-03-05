@@ -15,6 +15,7 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import org.springframework.util.AntPathMatcher;
 
 import javax.crypto.SecretKey;
 import java.util.List;
@@ -28,6 +29,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     @Value("#{'${jwt.exclude-paths}'.split(',')}")
     private List<String> excludePaths;
 
+    private final AntPathMatcher antPathMatcher = new AntPathMatcher();
     private final ReactiveStringRedisTemplate redisTemplate;
 
     public JwtAuthFilter(ReactiveStringRedisTemplate redisTemplate) {
@@ -40,7 +42,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
         // 白名单放行
         for (String exclude : excludePaths) {
-            if (path.startsWith(exclude)) {
+            if (antPathMatcher.match(exclude, path)) {
                 return chain.filter(exchange);
             }
         }

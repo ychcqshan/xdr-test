@@ -51,35 +51,27 @@ public class TopologyService {
 
                 if (response != null && response.getData() != null) {
                     for (Map<String, Object> hostAsset : response.getData()) {
-                        if (!"NETWORK".equals(hostAsset.get("assetType")))
-                            continue;
-
                         String dataJson = (String) hostAsset.get("assetData");
                         Map<String, Object> data = objectMapper.readValue(dataJson, Map.class);
 
-                        String localAddr = (String) data.get("localAddr"); // format IP:Port
-                        String remoteAddr = (String) data.get("remoteAddr");
+                        if ("NETWORK".equals(hostAsset.get("assetType"))) {
+                            // 处理监听/活跃端口 (TCP)
+                            String localAddr = (String) data.get("localAddr");
+                            String remoteAddr = (String) data.get("remoteAddr");
 
-                        if (localAddr != null && remoteAddr != null) {
-                            String srcIp = localAddr.split(":")[0];
-                            String[] remoteParts = remoteAddr.split(":");
-                            String dstIp = remoteParts[0];
-                            String dstPort = remoteParts.length > 1 ? remoteParts[1] : "";
-
-                            // 忽略回环地址
-                            if ("127.0.0.1".equals(dstIp) || "0.0.0.0".equals(dstIp))
-                                continue;
-
-                            // 添加目的节点（如果是外部IP）
-                            if (nodeIds.add(dstIp)) {
-                                nodes.add(new GraphDTO.Node(dstIp, dstIp, "EXTERNAL"));
+                            if (localAddr != null && remoteAddr != null) {
+                                String srcIp = localAddr.split(":")[0];
+                                String[] remoteParts = remoteAddr.split(":");
+                                String dstIp = remoteParts[0];
+                                String dstPort = remoteParts.length > 1 ? remoteParts[1] : "";
+                                addNodeAndEdge(nodes, edges, nodeIds, edgeIds, srcIp, dstIp, dstPort);
                             }
-
-                            // 添加边
-                            String edgeId = srcIp + "->" + dstIp + ":" + dstPort;
-                            if (edgeIds.add(edgeId)) {
-                                edges.add(new GraphDTO.Edge(srcIp, dstIp, dstPort));
-                            }
+                        } else if ("TRAFFIC".equals(hostAsset.get("assetType"))) {
+                            // 处理混杂模式采集的流量快照 (Packet Sniffing)
+                            String srcIp = (String) data.get("srcIp");
+                            String dstIp = (String) data.get("dstIp");
+                            String dstPort = String.valueOf(data.getOrDefault("dstPort", ""));
+                            addNodeAndEdge(nodes, edges, nodeIds, edgeIds, srcIp, dstIp, dstPort);
                         }
                     }
                 }
@@ -91,5 +83,23 @@ public class TopologyService {
         graph.setNodes(nodes);
         graph.setEdges(edges);
         return graph;
+    }
+
+    private void addNodeAndEdge(List<GraphDTO.Node> nodes, List<GraphDTO.Edge> edges, Set<String> nodeIds,
+            Set<String> edgeIds, String srcIp, String dstIp, String dstPort) {
+        // 忽略回环地址
+        if (dstIp == null || "127.0.0.1".equals(dstIp) || "0.0.0.0".equals(dstIp) || "::1".equals(dstIp))
+            return;
+
+        // 添加目的节点（如果是外部IP或新发现节点）
+        if (nodeIds.add(dstIp)) {
+            nodes.add(new GraphDTO.Node(dstIp, dstIp, "EXTERNAL"));
+        }
+
+        // 添加边
+        String edgeId = srcIp + "->" + dstIp + ":" + (dstPort != null ? dstPort : "");
+        if (edgeIds.add(edgeId)) {
+            edges.add(new GraphDTO.Edge(srcIp, dstIp, dstPort));
+        }
     }
 }

@@ -31,6 +31,6 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<?> handleException(Exception e) {
         log.error("系统异常", e);
-        return ApiResponse.error("系统内部错误");
+        return ApiResponse.error(e.getClass().getSimpleName() + ": " + e.getMessage());
     }
 }

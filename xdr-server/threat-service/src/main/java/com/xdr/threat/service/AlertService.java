@@ -7,10 +7,8 @@ import com.xdr.common.dto.PageResponse;
 import com.xdr.common.exception.BusinessException;
 import com.xdr.threat.mapper.AlertMapper;
 import com.xdr.threat.mapper.EventMapper;
-import com.xdr.threat.mapper.HostAssetMapper;
 import com.xdr.threat.model.Alert;
 import com.xdr.threat.model.Event;
-import com.xdr.threat.model.HostAsset;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,8 +26,10 @@ public class AlertService {
 
     private final AlertMapper alertMapper;
     private final EventMapper eventMapper;
-    private final HostAssetMapper hostAssetMapper;
     private final ObjectMapper objectMapper;
+    private final org.springframework.web.client.RestTemplate restTemplate;
+
+    private static final String POLICY_SERVICE_URL = "http://localhost:8085";
 
     /**
      * S-THR-001: 接收Agent上报事件并存储
@@ -141,73 +141,25 @@ public class AlertService {
     }
 
     /**
-     * 同步资产快照
+     * 同步资产快照到 asset-service
      */
     private void syncAssetSnapshot(String agentId, String type, String reportType, List<Map<String, Object>> items) {
-        if (!"PROCESS".equals(type) && !"NETWORK".equals(type))
+        if (!"PROCESS".equals(type) && !"NETWORK".equals(type) &&
+                !"SOFTWARE".equals(type) && !"USB".equals(type) && !"LOGIN".equals(type) &&
+                !"TRAFFIC".equals(type))
             return;
 
-        if ("FULL".equals(reportType)) {
-            // 全量上报：删除旧的，插入新的
-            hostAssetMapper.delete(new QueryWrapper<HostAsset>()
-                    .eq("agent_id", agentId)
-                    .eq("asset_type", type));
-            for (Map<String, Object> item : items) {
-                saveAsset(agentId, type, item);
-            }
-        } else if ("INCREMENTAL".equals(reportType)) {
-            // 增量上报：按 action 处理
-            for (Map<String, Object> item : items) {
-                String action = (String) item.getOrDefault("action", "ADD");
-                String assetId = buildAssetId(type, item);
-                if ("REMOVE".equals(action)) {
-                    hostAssetMapper.delete(new QueryWrapper<HostAsset>()
-                            .eq("agent_id", agentId)
-                            .eq("asset_type", type)
-                            .eq("asset_id", assetId));
-                } else {
-                    // ADD 或 UPDATE
-                    saveAsset(agentId, type, item);
-                }
-            }
-        }
-    }
-
-    private void saveAsset(String agentId, String type, Map<String, Object> item) {
-        String assetId = buildAssetId(type, item);
-        HostAsset asset = hostAssetMapper.selectOne(new QueryWrapper<HostAsset>()
-                .eq("agent_id", agentId)
-                .eq("asset_type", type)
-                .eq("asset_id", assetId));
-
-        if (asset == null) {
-            asset = new HostAsset();
-            asset.setAgentId(agentId);
-            asset.setAssetType(type);
-            asset.setAssetId(assetId);
-        }
-
         try {
-            asset.setAssetData(objectMapper.writeValueAsString(item));
+            Map<String, Object> request = new HashMap<>();
+            request.put("agentId", agentId);
+            request.put("assetType", type);
+            request.put("reportType", reportType);
+            request.put("items", items);
+
+            restTemplate.postForObject("http://localhost:8082/api/v1/assets/internal/sync", request, Object.class);
         } catch (Exception e) {
-            log.error("资产数据序列化失败", e);
+            log.error("Failed to sync asset snapshot to asset-service", e);
         }
-
-        if (asset.getId() == null) {
-            hostAssetMapper.insert(asset);
-        } else {
-            hostAssetMapper.updateById(asset);
-        }
-    }
-
-    private String buildAssetId(String type, Map<String, Object> item) {
-        if ("PROCESS".equals(type)) {
-            return item.get("pid") + "|" + item.get("name") + "|" + item.get("createTime");
-        } else if ("NETWORK".equals(type)) {
-            return item.get("protocol") + "|" + item.get("localAddr") + "|" + item.get("remoteAddr") + "|"
-                    + item.get("pid");
-        }
-        return String.valueOf(item.hashCode());
     }
 
     /** 基线偏差生成告警 */
@@ -228,7 +180,7 @@ public class AlertService {
         alertMapper.insert(alert);
     }
 
-    /** 执行响应动作 (Phase 2) */
+    /** 执行响应动作 (Phase 2 & 3) */
     public void executeResponse(String alertId, String operator) {
         Alert alert = alertMapper.selectById(alertId);
         if (alert == null)
@@ -237,8 +189,44 @@ public class AlertService {
             throw new BusinessException("该告警无建议响应动作");
 
         log.info("执行响应动作: {} 对 告警 {}", alert.getResponseAction(), alertId);
-        // 此处逻辑应当下发指令给 Agent，Phase 2 暂做状态变更展示
-        alert.setResponseStatus("EXECUTED");
+
+        // Phase 3: 下发指令到 policy-service
+        try {
+            Map<String, Object> command = new HashMap<>();
+            command.put("agentId", alert.getAgentId());
+            command.put("commandType", alert.getResponseAction());
+            // 如果是终端进程，提取相关联的 PID (假设存储在 rawEvent 中)
+            Map<String, Object> commandData = new HashMap<>();
+            if ("TERMINATE_PROCESS".equals(alert.getResponseAction())) {
+                // 简单示例：从描述或rawEvent中提取PID，实际应有更结构化的存储
+                commandData.put("pid", extractPidFromAlert(alert));
+            }
+            command.put("commandData", objectMapper.writeValueAsString(commandData));
+
+            restTemplate.postForEntity(POLICY_SERVICE_URL + "/api/v1/policies/commands", command, Void.class);
+
+            alert.setResponseStatus("SENT");
+        } catch (Exception e) {
+            log.error("下发指令失败", e);
+            alert.setResponseStatus("FAILED");
+            alert.setResolveComment("指令下发失败: " + e.getMessage());
+        }
+
         alertMapper.updateById(alert);
+    }
+
+    private String extractPidFromAlert(Alert alert) {
+        // 模型简化处理：从 rawEvent JSON 中提取逻辑
+        try {
+            Map<String, Object> event = objectMapper.readValue(alert.getRawEvent(), Map.class);
+            if (event.containsKey("pid"))
+                return String.valueOf(event.get("pid"));
+            // 嵌套逻辑
+            Map<String, Object> data = (Map<String, Object>) event.get("eventData");
+            if (data != null && data.containsKey("pid"))
+                return String.valueOf(data.get("pid"));
+        } catch (Exception e) {
+        }
+        return "0";
     }
 }

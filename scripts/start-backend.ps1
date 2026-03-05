@@ -4,14 +4,14 @@ $ErrorActionPreference = "Stop"
 $rootPath = "e:\project\xdr-test\xdr-server"
 $logDir = "e:\project\xdr-test\logs"
 $services = @(
-    @{ name = "api-gateway"; path = "api-gateway"; port = 8080 },
     @{ name = "auth-service"; path = "auth-service"; port = 8081 },
     @{ name = "asset-service"; path = "asset-service"; port = 8082 },
     @{ name = "baseline-service"; path = "baseline-service"; port = 8083 },
     @{ name = "threat-service"; path = "threat-service"; port = 8084 },
     @{ name = "policy-service"; path = "policy-service"; port = 8085 },
     @{ name = "upgrade-service"; path = "upgrade-service"; port = 8086 },
-    @{ name = "compliance-service"; path = "compliance-service"; port = 8087 }
+    @{ name = "compliance-service"; path = "compliance-service"; port = 8087 },
+    @{ name = "api-gateway"; path = "api-gateway"; port = 8080 }
 )
 
 Write-Host "--- XDR Backend Startup Program ---" -ForegroundColor Cyan

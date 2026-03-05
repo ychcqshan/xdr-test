@@ -9,6 +9,9 @@ class ExtraCollector(BaseCollector):
     """
     采集软件列表、USB设备历史、登录审计
     """
+    def name(self) -> str:
+        return "EXTRA"
+
     def collect(self):
         return {
             "softwares": self._get_softwares(),
@@ -20,7 +23,19 @@ class ExtraCollector(BaseCollector):
     def _get_softwares(self):
         softwares = []
         if platform.system() == "Windows":
-            # 这是一个简化的获取方式，生产环境建议使用 winreg
+```python
+            import winreg
+            reg_paths = [
+                (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
+                (winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"),
+                (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Uninstall")
+            ]
+            for hive, key_path in reg_paths:
+                try:
+                    with winreg.OpenKey(hive, key_path) as key:
+                        for i in range(winreg.QueryInfoKey(key)[0]):
+                            try:
+                                subkey
             try:
                 import winreg
                 keys = [
@@ -73,10 +88,10 @@ class ExtraCollector(BaseCollector):
             # 使用 psutil 获取当前在线用户
             for user in psutil.users():
                 logins.append({
-                    "user": user.name,
+                    "userName": user.name,
                     "terminal": user.terminal,
                     "host": user.host,
-                    "started": datetime.fromtimestamp(user.started).isoformat()
+                    "loginTime": datetime.fromtimestamp(user.started).isoformat()
                 })
         except Exception:
             pass

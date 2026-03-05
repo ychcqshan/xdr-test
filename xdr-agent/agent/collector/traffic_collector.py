@@ -7,6 +7,9 @@ class TrafficCollector(BaseCollector):
     """
     使用 Scapy 开启网卡混杂模式采集流量元数据，辅助拓扑生成
     """
+    def name(self) -> str:
+        return "TRAFFIC"
+
     def __init__(self):
         self.connections = {}  # {(src, dst, dport): count}
         self.lock = threading.Lock()
@@ -37,10 +40,10 @@ class TrafficCollector(BaseCollector):
             snapshot = []
             for (src, dst, dport, proto), count in self.connections.items():
                 snapshot.append({
-                    "src": src,
-                    "dst": dst,
-                    "dport": dport,
-                    "proto": proto,
+                    "srcIp": src,
+                    "dstIp": dst,
+                    "dstPort": dport,
+                    "protocol": proto,
                     "count": count
                 })
             # 重置计数，保证每次上报增量或近期活跃连接

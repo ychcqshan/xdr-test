@@ -14,11 +14,17 @@ import java.util.List;
 public class PolicyService {
 
     private final PolicyMapper policyMapper;
+    private final com.xdr.policy.mapper.ResponseCommandMapper responseCommandMapper;
 
     /**
-     * 获取对特定Agent生效的策略 (优先级: AGENT > GROUP > GLOBAL)
+     * 获取针对特定Agent生效的策略 (优先级: AGENT > GROUP > GLOBAL)
      */
     public Policy getEffectivePolicy(String agentId, String groupId) {
+        // ... (省略现有代码逻辑以便应用)
+        return getPolicyLogic(agentId, groupId);
+    }
+
+    private Policy getPolicyLogic(String agentId, String groupId) {
         // 1. 检查 Agent 特定策略
         Policy agentPolicy = policyMapper.selectOne(new LambdaQueryWrapper<Policy>()
                 .eq(Policy::getScope, "AGENT")
@@ -26,7 +32,8 @@ public class PolicyService {
                 .eq(Policy::getStatus, 1)
                 .orderByDesc(Policy::getVersion)
                 .last("LIMIT 1"));
-        if (agentPolicy != null) return agentPolicy;
+        if (agentPolicy != null)
+            return agentPolicy;
 
         // 2. 检查 Group 策略
         if (groupId != null) {
@@ -36,7 +43,8 @@ public class PolicyService {
                     .eq(Policy::getStatus, 1)
                     .orderByDesc(Policy::getVersion)
                     .last("LIMIT 1"));
-            if (groupPolicy != null) return groupPolicy;
+            if (groupPolicy != null)
+                return groupPolicy;
         }
 
         // 3. 全局策略
@@ -59,6 +67,28 @@ public class PolicyService {
             Policy existing = policyMapper.selectById(policy.getId());
             policy.setVersion(existing.getVersion() + 1);
             policyMapper.updateById(policy);
+        }
+    }
+
+    // --- Response Command Methods ---
+
+    public void createCommand(com.xdr.policy.model.ResponseCommand command) {
+        command.setStatus("PENDING");
+        responseCommandMapper.insert(command);
+    }
+
+    public List<com.xdr.policy.model.ResponseCommand> getPendingCommands(String agentId) {
+        return responseCommandMapper.selectList(new LambdaQueryWrapper<com.xdr.policy.model.ResponseCommand>()
+                .eq(com.xdr.policy.model.ResponseCommand::getAgentId, agentId)
+                .eq(com.xdr.policy.model.ResponseCommand::getStatus, "PENDING"));
+    }
+
+    public void updateCommandStatus(String commandId, String status, String error) {
+        com.xdr.policy.model.ResponseCommand command = responseCommandMapper.selectById(commandId);
+        if (command != null) {
+            command.setStatus(status);
+            command.setErrorMessage(error);
+            responseCommandMapper.updateById(command);
         }
     }
 }

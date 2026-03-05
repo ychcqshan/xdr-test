@@ -1,0 +1,96 @@
+﻿[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] XDR Server                                                         [pom]
+[INFO] XDR Common                                                         [jar]
+[INFO] XDR Auth Service                                                   [jar]
+[INFO] 
+[INFO] -------------------------< com.xdr:xdr-server >-------------------------
+[INFO] Building XDR Server 1.0.0-SNAPSHOT                                 [1/3]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.3.2:clean (default-clean) @ xdr-server ---
+[INFO] 
+[INFO] ---------------------------< com.xdr:common >---------------------------
+[INFO] Building XDR Common 1.0.0-SNAPSHOT                                 [2/3]
+[INFO]   from common\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.3.2:clean (default-clean) @ common ---
+[INFO] Deleting E:\project\xdr-test\xdr-server\common\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ common ---
+[INFO] skip non existing resourceDirectory E:\project\xdr-test\xdr-server\common\src\main\resources
+[INFO] skip non existing resourceDirectory E:\project\xdr-test\xdr-server\common\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ common ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 8 source files with javac [debug release 17] to target\classes
+mvn : WARNING: A term
+inally deprecated met
+hod in sun.misc.Unsaf
+e has been called
+所在位置 行:1 字符: 1
++ mvn clean compile -
+pl auth-service -am -
+DskipTests 2>&1 | Out
+-File -F ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (WARNING   
+ : A term...has b    
+een called:Strin    g
+) [], RemoteExc    ep
+tion
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+WARNING: sun.misc.Uns
+afe::objectFieldOffse
+t has been called by 
+lombok.permit.Permit
+WARNING: Please consi
+der reporting this to
+ the maintainers of c
+lass lombok.permit.Pe
+rmit
+WARNING: sun.misc.Uns
+afe::objectFieldOffse
+t will be removed in 
+a future release
+[INFO] 
+[INFO] ------------------------< com.xdr:auth-service >------------------------
+[INFO] Building XDR Auth Service 1.0.0-SNAPSHOT                           [3/3]
+[INFO]   from auth-service\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.3.2:clean (default-clean) @ auth-service ---
+[INFO] Deleting E:\project\xdr-test\xdr-server\auth-service\target
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for XDR Server 1.0.0-SNAPSHOT:
+[INFO] 
+[INFO] XDR Server ......................................... SUCCESS [  0.219 s]
+[INFO] XDR Common ......................................... SUCCESS [  4.474 s]
+[INFO] XDR Auth Service ................................... FAILURE [  1.293 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  6.643 s
+[INFO] Finished at: 2026-03-05T14:43:00+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-clean-plugin:3.3.2:clean (default-clean) on project auth-service: Failed to clean project: Failed to delete E:\project\xdr-test\xdr-server\auth-service\target\auth-service-1.0.0-SNAPSHOT.jar -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :auth-service

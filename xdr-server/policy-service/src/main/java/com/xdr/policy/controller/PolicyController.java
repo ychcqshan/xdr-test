@@ -35,4 +35,27 @@ public class PolicyController {
             @RequestParam(required = false) String groupId) {
         return ApiResponse.ok(policyService.getEffectivePolicy(agentId, groupId));
     }
+
+    /** 创建处置指令 (由 ThreatService 调用) */
+    @PostMapping("/commands")
+    public ApiResponse<Void> createCommand(@RequestBody com.xdr.policy.model.ResponseCommand command) {
+        policyService.createCommand(command);
+        return ApiResponse.ok();
+    }
+
+    /** 获取待处理指令 (由 Agent 调用) */
+    @GetMapping("/commands/pending/{agentId}")
+    public ApiResponse<List<com.xdr.policy.model.ResponseCommand>> getPendingCommands(@PathVariable String agentId) {
+        return ApiResponse.ok(policyService.getPendingCommands(agentId));
+    }
+
+    /** 更新指令执行状态 (由 Agent 调用) */
+    @PutMapping("/commands/{commandId}/status")
+    public ApiResponse<Void> updateCommandStatus(
+            @PathVariable String commandId,
+            @RequestParam String status,
+            @RequestParam(required = false) String error) {
+        policyService.updateCommandStatus(commandId, status, error);
+        return ApiResponse.ok();
+    }
 }

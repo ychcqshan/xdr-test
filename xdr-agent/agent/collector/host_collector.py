@@ -8,6 +8,9 @@ class HostCollector(BaseCollector):
     """
     采集主机的基础信息与硬件参数
     """
+    def name(self) -> str:
+        return "HOST"
+
     def collect(self):
         try:
             cpu_info = {
