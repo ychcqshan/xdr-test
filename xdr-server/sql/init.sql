@@ -79,6 +79,22 @@ CREATE TABLE IF NOT EXISTS user_info (
     INDEX idx_agent_id (agent_id)
 );
 
+CREATE TABLE IF NOT EXISTS host_asset_record (
+    id VARCHAR(36) PRIMARY KEY,
+    agent_id VARCHAR(50) NOT NULL,
+    asset_type VARCHAR(20) NOT NULL COMMENT 'PROCESS/NETWORK/SOFTWARE/USB/LOGIN',
+    asset_fingerprint VARCHAR(255) NOT NULL COMMENT '资产指纹Hash',
+    asset_data JSON NOT NULL COMMENT '详细快照数据',
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/INACTIVE',
+    first_seen DATETIME NOT NULL,
+    last_updated DATETIME NOT NULL,
+    deleted INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX idx_agent_fp (agent_id, asset_type, asset_fingerprint),
+    INDEX idx_status_time (status, last_updated)
+);
+
 -- =============================================
 -- 基线服务数据库
 CREATE DATABASE IF NOT EXISTS xdr_baseline DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

@@ -62,7 +62,8 @@ public class AlertService {
 
         if (nestedData != null) {
             String reportType = (String) nestedData.getOrDefault("reportType", "FULL");
-            List<Map<String, Object>> items = (List<Map<String, Object>>) nestedData.get("items");
+            // Agent 各采集器返回的数据 key 不一致，需按 eventType 动态提取
+            List<Map<String, Object>> items = extractItemsFromEventData(event.getEventType(), nestedData);
             if (items != null && !items.isEmpty()) {
                 syncAssetSnapshot(event.getAgentId(), event.getEventType(), reportType, items);
             }
@@ -98,7 +99,7 @@ public class AlertService {
      * S-THR-012: 告警列表(分页+筛选)
      */
     public PageResponse<Alert> listAlerts(int page, int size, String level,
-            String status, String agentId, String threatType) {
+            String status, String agentId, String threatType, String unit, String responsiblePerson) {
         QueryWrapper<Alert> query = new QueryWrapper<>();
 
         if (StringUtils.hasText(level))
@@ -109,6 +110,10 @@ public class AlertService {
             query.eq("agent_id", agentId);
         if (StringUtils.hasText(threatType))
             query.eq("threat_type", threatType);
+        if (StringUtils.hasText(unit))
+            query.eq("unit", unit);
+        if (StringUtils.hasText(responsiblePerson))
+            query.eq("responsible_person", responsiblePerson);
 
         query.orderByDesc("created_at");
 
@@ -138,6 +143,48 @@ public class AlertService {
         stats.put("byLevel", byLevel);
         stats.put("trend7d", trend);
         return stats;
+    }
+
+    /**
+     * 根据 eventType 从 Agent 上报数据中动态提取对应的列表字段
+     * Agent 各采集器的返回结构不同:
+     * PROCESS -> {"processes": [...], "count": N}
+     * NETWORK -> {"ports": [...]}
+     * TRAFFIC -> {"connections": [...]}
+     * SOFTWARE/USB/LOGIN -> {"items": [...]} 或其他
+     */
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> extractItemsFromEventData(String eventType, Map<String, Object> data) {
+        // 按优先级尝试从已知的 key 中提取列表
+        String[] candidateKeys;
+        switch (eventType != null ? eventType : "") {
+            case "PROCESS":
+                candidateKeys = new String[] { "processes", "items" };
+                break;
+            case "NETWORK":
+                candidateKeys = new String[] { "ports", "items" };
+                break;
+            case "TRAFFIC":
+                candidateKeys = new String[] { "connections", "items" };
+                break;
+            case "LOGIN":
+                candidateKeys = new String[] { "logins", "items" };
+                break;
+            default:
+                candidateKeys = new String[] { "items", "softwares", "usb_devices", "processes", "ports", "connections",
+                        "logins" };
+                break;
+        }
+
+        for (String key : candidateKeys) {
+            Object raw = data.get(key);
+            if (raw instanceof List) {
+                return (List<Map<String, Object>>) raw;
+            }
+        }
+
+        log.debug("未能从 eventType={} 的数据中提取 items, keys={}", eventType, data.keySet());
+        return null;
     }
 
     /**

@@ -1,0 +1,26 @@
+﻿{
+    "code":  200,
+    "message":  "success",
+    "data":  {
+                 "id":  "76c8c43405a657ac0305df17df90cb90",
+                 "createdAt":  "2026-03-06T11:53:30",
+                 "updatedAt":  "2026-03-06T11:53:30",
+                 "deleted":  0,
+                 "agentId":  "AGENT-B465BC9E3E7A45D5",
+                 "hostname":  "zw",
+                 "osType":  "WINDOWS",
+                 "osVersion":  "10.0.26100",
+                 "cpuArch":  "AMD64",
+                 "cpuModel":  null,
+                 "memoryTotal":  33819602944,
+                 "diskTotal":  null,
+                 "macAddress":  "E8-BF-B8-C1-64-D9",
+                 "ipAddress":  "198.18.0.1",
+                 "agentVersion":  "2.1.0",
+                 "status":  "ONLINE",
+                 "groupId":  null,
+                 "department":  null,
+                 "riskScore":  0,
+                 "lastHeartbeat":  "2026-03-07T21:49:42"
+             }
+}

@@ -462,6 +462,8 @@ class CommManager:
 | S-ASSET-006 | 资产在线状态 | 实时监控Agent在线状态 | 5分钟无心跳→标记OFFLINE并触发告警；心跳恢复→自动标记ONLINE |
 | S-ASSET-007 | 资产软件清单 | 管理终端安装的软件列表 | 展示软件名称、版本、安装日期，支持按软件搜索所有安装了该软件的资产 |
 | S-ASSET-008 | 用户信息管理 | 管理Agent绑定的用户信息 | 展示/编辑用户姓名、部门、单位、联系方式，关联安全事件分析 |
+| S-ASSET-009 | 列表与搜索优化 | 全站统一搜索体验与高性能列表展示 | 引入 Popover 悬浮浮窗、搜索 Label 13px 样式统一及前端分页逻辑 |
+| S-ASSET-009 | 资产列表优化 | 优化海量资产下的展示性能 | 引入表格 Popover 及前端分页机制 |
 
 #### 4.1.3 基线管理功能 (baseline-service)
 
@@ -833,7 +835,7 @@ erDiagram
 |---------|---------|---------|--------|
 | F-ASSET-001 | 资产树形分组 | 左侧树形展示部门/组/标签分组结构 | el-tree |
 | F-ASSET-002 | 资产列表 | 右侧展示选中分组下的资产表格，支持排序/筛选/分页 | el-table + el-pagination |
-| F-ASSET-003 | 多条件搜索 | 按主机名/IP/OS/状态/风险等级组合搜索 | el-form筛选栏 |
+| F-ASSET-003 | 多条件搜索 | 按主机名/IP/OS/状态/风险等级/所属单位/责任人组合搜索 | el-form 筛选栏 (13px 标签) |
 | F-ASSET-004 | 资产详情面板 | 点击资产展开详情侧栏：硬件/软件/用户/基线/告警 | el-drawer侧栏详情 |
 | F-ASSET-005 | 风险评分卡 | 在详情中展示资产风险评分及各维度得分 | ECharts雷达图 |
 | F-ASSET-006 | 批量操作 | 支持批量选择资产执行操作(分组/策略应用/升级) | el-table selection + el-dropdown |
@@ -1106,3 +1108,60 @@ xdr-platform/
 ---
 
 **文档结束**
+---
+
+## 七、数据上报与资产管理链路
+
+### 7.1 上报机制与资产聚合策略
+
+为了平衡 **实时性** 与 **系统负载**，项目采用 **“实时增量 (Incremental) + 周期全量 (Full Backup) + 后端状态机 (Backend State Machine)”** 的核心架构。Agent 负责极轻量的变更捕获，后端负责维护主机的资产全貌快照。
+
+#### 7.1.1 数据类型与样例
+
+| 数据类型 (`assetType`) | 核心动作 (`reportType`) | 逻辑详述 | 频率 |
+| :--- | :--- | :--- | :--- |
+| **HOST (Heartbeat)** | `HEARTBEAT` | 采集系统基础元数据（OS、CPU、IP） | 每 300s |
+| **PROCESS** | `ADD/REMOVE/FULL` | 基于 PID+启动时间指纹，实时上报进程启停变更 | 变更触发/12h兜底 |
+| **NETWORK** | `ADD/REMOVE/FULL` | 捕获连接状态变更，支持 TCP/UDP 增量上报 | 变更触发/12h兜底 |
+| **SOFTWARE** | `FULL` | 上报系统已装软件清单，暂采用全量差异上报 | 每日全量同步 |
+| **USB/LOGIN** | `ADD` | 实时监听 USB 插拔或用户登录事件 | 实时触发 (Event) |
+| **TRAFFIC** | `TRAFFIC` | 汇总流量统计快照，由后端进行链路聚合 | 5min 周期 |
+
+#### 7.1.2 样例数据 (JSON)
+```json
+// 以 PROCESS 为例
+{
+  "agentId": "AGENT-D1E333A05EA14EFE",
+  "assetType": "PROCESS",
+  "reportType": "INCREMENTAL",
+  "items": [
+    {
+      "pid": 1234,
+      "name": "nginx.exe",
+      "action": "ADD",
+      "createTime": "2026-03-05T20:00:00"
+    }
+  ]
+}
+```
+
+### 7.2 后端聚合状态机逻辑 (Backend Aggregation)
+
+后端 `asset-service` 充当资产的 **状态终态机**。它根据 Agent 投递的操作码动态维护 `host_asset_record` 表的生命周期。
+
+1. **ADD (新增/保活)**：执行 **Upsert**。根据 `fingerprint` 进行唯一性判断。若记录已存在，则刷新其 `last_updated` 并强制设为 `ACTIVE`；否则新建记录。
+2. **REMOVE (逻辑下线)**：执行 **Inactive** 操作。将匹配指纹的存量记录状态改为 `INACTIVE`。
+3. **FULL (全量校准)**：
+   - **清除脏态**：同步开始时，将当前 Agent 及该类型下所有处于 `ACTIVE` 的记录暂时标记为脏数据。
+   - **全量注入**：Agent 推送全量快照，后端按 **ADD** 逻辑同步应处理。未被提及的记录维持 `INACTIVE`，实现跨端状态的强一致同步。
+4. **数据降解**：系统 Cron 任务会自动清理 `INACTIVE` 状态超过 30 天的冷数据。
+
+### 7.3 前端显示与时序回溯 (Timeline View)
+
+前端 `AssetDetailView` 提供了实时的资产视图及“时间机器”功能。
+
+- **实时视图**：默认显示所有 `status='ACTIVE'` 的最新资产数据。
+- **时间机器 (Time Machine)**：
+  - **接口**：调用 `/api/v1/host-assets/timeline?agentId=...&timestamp=...`。
+  - **逻辑**：后端查询 `first_seen <= timestamp AND last_updated >= timestamp` 的记录，还原该时间点的系统快照。
+  - **交互**：进入历史模式后，页面顶部显示黄色警告 Banner，锁定自动刷新，允许管理员“穿越”回溯历史任意时刻的进程或连接状态。

@@ -1,5 +1,5 @@
 agent:
-  agent_id: AGENT-B2A4645C88F44B5C
+  agent_id: AGENT-B465BC9E3E7A45D5
   re_register: false
   server_url: http://localhost:8080
 collector:

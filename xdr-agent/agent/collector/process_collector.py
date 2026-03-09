@@ -23,9 +23,22 @@ class ProcessCollector(BaseCollector):
                 except (psutil.AccessDenied, psutil.NoSuchProcess):
                     pinfo['cmdline'] = ""
                 
-                # 转换启动时间为 ISO 格式
-                if pinfo['create_time']:
-                    pinfo['create_time'] = datetime.fromtimestamp(pinfo['create_time']).isoformat()
+                # 获取可执行文件路径
+                try:
+                    pinfo['path'] = proc.exe()
+                except (psutil.AccessDenied, psutil.NoSuchProcess):
+                    pinfo['path'] = ""
+                
+                # 转换启动时间为 ISO 格式并对齐前端字段名
+                if pinfo.get('create_time'):
+                    pinfo['createTime'] = datetime.fromtimestamp(pinfo['create_time']).isoformat()
+                else:
+                    pinfo['createTime'] = ""
+                pinfo.pop('create_time', None)
+
+                # 将使用率字段转为驼峰
+                pinfo['cpuPercent'] = pinfo.pop('cpu_percent', 0.0)
+                pinfo['memoryPercent'] = pinfo.pop('memory_percent', 0.0)
                 
                 processes.append(pinfo)
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):

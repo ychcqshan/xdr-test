@@ -19,8 +19,8 @@ class PortCollector(BaseCollector):
             for conn in connections:
                 if conn.status in ['LISTEN', 'ESTABLISHED']:
                     port_info = {
-                        "local_addr": f"{conn.laddr.ip}:{conn.laddr.port}",
-                        "remote_addr": f"{conn.raddr.ip}:{conn.raddr.port}" if conn.raddr else None,
+                        "localAddr": f"{conn.laddr.ip}:{conn.laddr.port}",
+                        "remoteAddr": f"{conn.raddr.ip}:{conn.raddr.port}" if conn.raddr else None,
                         "status": conn.status,
                         "pid": conn.pid,
                         "protocol": "TCP" if conn.type == 1 else "UDP"

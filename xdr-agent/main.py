@@ -71,9 +71,10 @@ def collect_and_report():
                     items.append({
                         "pid": p.get("pid"),
                         "name": p.get("name"),
-                        "createTime": p.get("create_time"),
+                        "createTime": p.get("createTime"),
                         "username": p.get("username"),
-                        "cpuPercent": p.get("cpu_percent")
+                        "cpuPercent": p.get("cpuPercent"),
+                        "path": p.get("path", "")
                     })
                 
                 report_type, diff_items = incremental.get_diff(name, items, key_fields)
@@ -88,8 +89,8 @@ def collect_and_report():
                 for p in raw_items:
                     items.append({
                         "protocol": p.get("protocol"),
-                        "localAddr": p.get("local_addr"),
-                        "remoteAddr": p.get("remote_addr"),
+                        "localAddr": p.get("localAddr"),
+                        "remoteAddr": p.get("remoteAddr"),
                         "pid": p.get("pid"),
                         "status": p.get("status")
                     })
@@ -99,16 +100,25 @@ def collect_and_report():
                     comm.report_event(event_type=name, event_data={'items': diff_items, 'reportType': report_type}, priority='LOW')
             
             elif name == 'EXTRA':
-                # 拆分为独立事件以便后端处理
-                if 'softwares' in data:
-                    comm.report_event(event_type='SOFTWARE', event_data={'items': data['softwares'], 'reportType': 'FULL'}, priority='LOW')
-                if 'usb_devices' in data:
-                    comm.report_event(event_type='USB', event_data={'items': data['usb_devices'], 'reportType': 'FULL'}, priority='LOW')
-                if 'logins' in data:
-                    comm.report_event(event_type='LOGIN', event_data={'items': data['logins'], 'reportType': 'FULL'}, priority='LOW')
+                # 拆分为独立事件并分别走增量比对
+                if 'softwares' in data and data['softwares']:
+                    sw_keys = ['name', 'version']
+                    sw_type, sw_diff = incremental.get_diff('SOFTWARE', data['softwares'], sw_keys)
+                    if sw_type != "NONE":
+                        comm.report_event(event_type='SOFTWARE', event_data={'items': sw_diff, 'reportType': sw_type}, priority='LOW')
+                if 'usb_devices' in data and data['usb_devices']:
+                    usb_keys = ['deviceId']
+                    usb_type, usb_diff = incremental.get_diff('USB', data['usb_devices'], usb_keys)
+                    if usb_type != "NONE":
+                        comm.report_event(event_type='USB', event_data={'items': usb_diff, 'reportType': usb_type}, priority='LOW')
+                if 'logins' in data and data['logins']:
+                    login_keys = ['userName', 'loginTime']
+                    login_type, login_diff = incremental.get_diff('LOGIN', data['logins'], login_keys)
+                    if login_type != "NONE":
+                        comm.report_event(event_type='LOGIN', event_data={'items': login_diff, 'reportType': login_type}, priority='LOW')
             elif name == 'TRAFFIC':
-                if 'traffic' in data:
-                    comm.report_event(event_type='TRAFFIC', event_data={'items': data['traffic'], 'reportType': 'FULL'}, priority='LOW')
+                if 'connections' in data:
+                    comm.report_event(event_type='TRAFFIC', event_data={'items': data['connections'], 'reportType': 'FULL'}, priority='LOW')
             else:
                 # 不支持增量的直接全量
                 comm.report_event(
@@ -297,7 +307,15 @@ def main():
         traffic_collector
     ]
 
-    # 4. 启动定时任务
+    # 4. 立即执行首次数据上报与心跳
+    logger.info("执行首次心跳与资产上报...")
+    try:
+        send_heartbeat()
+        collect_and_report()
+    except Exception as e:
+        logger.error(f"首次上报失败: {e}")
+
+    # 5. 启动定时任务
     scheduler = BlockingScheduler()
     scheduler.add_job(collect_and_report, 'interval', seconds=60, id='collect')
     scheduler.add_job(send_heartbeat, 'interval', seconds=300, id='heartbeat')

@@ -79,7 +79,9 @@ export default function XDRDashboard() {
                 <div className="flex items-center gap-8">
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-600/20">
-                            <Shield size={18} className="text-white" />
+                            <span className="text-white flex items-center justify-center">
+                                <Shield size={18} />
+                            </span>
                         </div>
                         <span className="font-bold text-lg tracking-tight">XDR Console</span>
                     </div>
@@ -136,8 +138,8 @@ export default function XDRDashboard() {
                                         key={tab}
                                         onClick={() => setActiveTab(tab.toLowerCase())}
                                         className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeTab === tab.toLowerCase()
-                                                ? 'bg-white text-slate-900 shadow-sm'
-                                                : 'text-slate-500 hover:text-slate-900'
+                                            ? 'bg-white text-slate-900 shadow-sm'
+                                            : 'text-slate-500 hover:text-slate-900'
                                             }`}
                                     >
                                         {tab}

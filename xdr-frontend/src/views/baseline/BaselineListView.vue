@@ -31,17 +31,32 @@
     <!-- Main Table Card -->
     <div class="bento-card table-panel-elite">
       <div class="card-header-elite border-header">
-        <h3>基线快照列表</h3>
-        <span class="count-badge">活跃基线: {{ baselines.length }}</span>
+        <div class="header-left">
+          <h3>基线快照列表</h3>
+          <span class="count-badge ml-4">活跃基线: {{ baselines.length }}</span>
+        </div>
+        <div class="header-filters">
+          <el-form :inline="true" class="mini-search-form">
+            <el-form-item label="所属单位">
+              <el-input v-model="filters.unit" placeholder="单位" clearable @change="fetchBaselines" />
+            </el-form-item>
+            <el-form-item label="责任人">
+              <el-input v-model="filters.responsiblePerson" placeholder="姓名" clearable @change="fetchBaselines" />
+            </el-form-item>
+          </el-form>
+        </div>
       </div>
 
       <div class="table-wrapper-elite">
         <el-table :data="baselines" v-loading="loading" class="elite-table no-border-table">
-          <el-table-column prop="agentId" label="关联 Agent ID" width="220">
+          <el-table-column prop="agentId" label="关联 Agent ID" width="200">
             <template #default="{ row }">
-              <span class="text-primary-bold">{{ row.agentId }}</span>
+              <span class="text-primary-bold">{{ row.agentId?.substring(0, 16) }}</span>
             </template>
           </el-table-column>
+          
+          <el-table-column prop="unit" label="所属单位" width="140" show-overflow-tooltip />
+          <el-table-column prop="responsiblePerson" label="责任人" width="100" />
           
           <el-table-column prop="version" label="基线版本" width="120">
             <template #default="{ row }">
@@ -128,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { getBaselines, getBaselineItems, approveBaseline } from '@/api/baseline'
 import { Plus, Compass, Connection, Switch } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -140,7 +155,11 @@ const tabs = [
   { label: '账号登录', name: 'LOGIN' },
   { label: '外设授权', name: 'USB' },
 ]
-const baselines = ref([])
+const filters = reactive({
+  unit: '',
+  responsiblePerson: ''
+})
+const baselines = ref<any[]>([])
 const loading = ref(false)
 const diffVisible = ref(false)
 const currentBaselineItems = ref([])
@@ -151,7 +170,10 @@ onMounted(() => fetchBaselines())
 async function fetchBaselines() {
   loading.value = true
   try {
-    const res: any = await getBaselines({ type: activeType.value })
+    const res: any = await getBaselines({ 
+      type: activeType.value,
+      ...filters
+    })
     baselines.value = res.data || []
   } finally { loading.value = false }
 }
@@ -194,11 +216,37 @@ function formatJson(items: any[]) {
 .elite-tabs-container { padding: 0 32px; }
 
 .border-header {
-  padding: 24px 32px;
+  padding: 16px 32px;
   border-bottom: 1px solid var(--card-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.mini-search-form {
+  display: flex;
+  align-items: center;
+}
+
+.mini-search-form :deep(.el-form-item) {
+  margin-bottom: 0 !important;
+  margin-right: 16px !important;
+}
+
+.mini-search-form :deep(.el-form-item__label) {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.mini-search-form :deep(.el-input__inner) {
+  height: 32px;
+  font-size: 12px;
 }
 
 .count-badge {

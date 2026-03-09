@@ -22,7 +22,7 @@ class LoginCollector(BaseCollector):
         result = []
         for user in psutil.users():
             result.append({
-                'username': user.name,
+                'userName': user.name,
                 'terminal': user.terminal or '',
                 'host': user.host or 'localhost',
                 'loginType': 'REMOTE' if user.host and user.host != 'localhost' else 'LOCAL',

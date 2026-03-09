@@ -129,10 +129,19 @@ h4,
 }
 
 .bento-card:hover {
-  transform: translateY(-8px) scale(1.01);
   box-shadow: var(--shadow-hover);
   border-color: rgba(79, 70, 229, 0.4);
   background: rgba(255, 255, 255, 0.85);
+}
+
+/* Elite Form System */
+.el-form-item__label {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  margin-bottom: 8px !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 /* Floating Navigation / Header */

@@ -21,10 +21,16 @@
             </el-select>
           </el-form-item>
           <el-form-item label="在线状态">
-            <el-select v-model="filters.status" placeholder="全部状态" clearable style="width:120px;">
+            <el-select v-model="filters.status" placeholder="全部" clearable style="width:100px;">
               <el-option label="在线" value="ONLINE" />
               <el-option label="离线" value="OFFLINE" />
             </el-select>
+          </el-form-item>
+          <el-form-item label="所属单位">
+            <el-input v-model="filters.unit" placeholder="输入单位名称" clearable style="width:140px;" />
+          </el-form-item>
+          <el-form-item label="责任人">
+            <el-input v-model="filters.responsiblePerson" placeholder="姓名查找" clearable style="width:120px;" />
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="loadData">
@@ -54,19 +60,41 @@
         @row-click="showDetail"
         class="elite-table"
       >
-        <el-table-column prop="hostname" label="受控端点名称" min-width="180">
+        <el-table-column prop="hostname" label="受控端点名称" min-width="140">
           <template #default="{ row }">
-            <div class="host-cell">
-              <div class="os-icon" :class="row.osType.toLowerCase()">
-                <el-icon><Platform /></el-icon>
+            <el-popover
+              placement="right"
+              :width="320"
+              trigger="hover"
+              popper-class="elite-popover"
+            >
+              <template #reference>
+                <div class="host-cell clickable">
+                  <div class="os-icon" :class="row.osType.toLowerCase()">
+                    <el-icon><Platform /></el-icon>
+                  </div>
+                  <div class="host-info">
+                    <span class="hostname">{{ row.hostname }}</span>
+                  </div>
+                </div>
+              </template>
+              <div class="popover-content">
+                <div class="popover-header">
+                  <span class="popover-title">端点详细信息</span>
+                </div>
+                <ul class="popover-list">
+                  <li><strong>Agent ID:</strong> {{ row.agentId }}</li>
+                  <li><strong>OS 版本:</strong> {{ row.osVersion }}</li>
+                  <li><strong>内网地址:</strong> {{ row.ipAddress }}</li>
+                  <li><strong>物理地址:</strong> {{ row.macAddress }}</li>
+                </ul>
               </div>
-              <div class="host-info">
-                <span class="hostname">{{ row.hostname }}</span>
-                <span class="agent-id">标识: {{ row.agentId?.substring(0, 8) }}...</span>
-              </div>
-            </div>
+            </el-popover>
           </template>
         </el-table-column>
+        
+        <el-table-column prop="unit" label="所属单位" width="140" />
+        <el-table-column prop="responsiblePerson" label="责任人" width="100" />
         
         <el-table-column prop="ipAddress" label="局域网地址" width="160">
           <template #default="{ row }">
@@ -132,7 +160,13 @@ const total = ref(0)
 const page = ref(1)
 const pageSize = ref(15)
 const loading = ref(false)
-const filters = reactive({ keyword: '', osType: '', status: '' })
+const filters = reactive({ 
+  keyword: '', 
+  osType: '', 
+  status: '',
+  unit: '',
+  responsiblePerson: ''
+})
 
 onMounted(() => loadData())
 
@@ -186,10 +220,11 @@ function formatTime(time: string) {
 }
 
 .elite-search-form {
-  margin-top: 32px;
+  margin-top: 24px;
   display: flex;
   align-items: flex-end;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 :deep(.el-form-item) {
@@ -198,12 +233,13 @@ function formatTime(time: string) {
 }
 
 :deep(.el-form-item__label) {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-light);
-  margin-bottom: 4px !important;
-  line-height: 1 !important;
+  color: var(--text-secondary);
+  margin-bottom: 6px !important;
+  line-height: 1.2 !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
 :deep(.el-input__wrapper), :deep(.el-select .el-input__wrapper) {
@@ -291,9 +327,10 @@ h3 {
 }
 
 .hostname {
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1.2;
 }
 
 .agent-id {

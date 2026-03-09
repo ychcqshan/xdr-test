@@ -1,0 +1,30 @@
+﻿java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:21:09.315+08:00 ERROR 29672 --- [threat-service] [io-8084-exec-10] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:21:25.812+08:00 ERROR 29672 --- [threat-service] [nio-8084-exec-3] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:22:05.817+08:00 ERROR 29672 --- [threat-service] [nio-8084-exec-6] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:22:25.205+08:00 ERROR 29672 --- [threat-service] [nio-8084-exec-9] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:23:05.019+08:00 ERROR 29672 --- [threat-service] [io-8084-exec-10] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:23:24.685+08:00 ERROR 29672 --- [threat-service] [nio-8084-exec-5] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:24:04.473+08:00 ERROR 29672 --- [threat-service] [nio-8084-exec-1] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:24:20.090+08:00 ERROR 29672 --- [threat-service] [nio-8084-exec-7] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:25:02.154+08:00 ERROR 29672 --- [threat-service] [nio-8084-exec-4] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:25:19.444+08:00 ERROR 29672 --- [threat-service] [nio-8084-exec-2] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:26:01.452+08:00 ERROR 29672 --- [threat-service] [nio-8084-exec-8] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:26:22.089+08:00 ERROR 29672 --- [threat-service] [nio-8084-exec-3] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+java.lang.ClassCastException: class java.util.LinkedHashMap cannot be cast to class java.util.List (java.util.LinkedHashMap and java.util.List are in module java.base of loader 'bootstrap')
+2026-03-05T20:26:24.809+08:00 ERROR 29672 --- [threat-service] [io-8084-exec-10] c.x.c.exception.GlobalExceptionHandler   : 系统异常
+org.apache.catalina.connector.ClientAbortException: java.io.IOException: 你的主机中的软件中止了一个已建立的连接。
+	Suppressed: org.apache.catalina.connector.ClientAbortException: java.io.IOException: 你的主机中的软件中止了一个已建立的连接。
+	Caused by: java.io.IOException: 你的主机中的软件中止了一个已建立的连接。
+Caused by: java.io.IOException: 你的主机中的软件中止了一个已建立的连接。

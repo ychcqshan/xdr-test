@@ -24,6 +24,9 @@ public class BaselineService {
     private final BaselineMapper baselineMapper;
     private final BaselineItemMapper baselineItemMapper;
     private final ObjectMapper objectMapper;
+    private final com.xdr.baseline.client.AssetServiceClient assetServiceClient;
+
+    private static final double FREQUENCY_THRESHOLD = 0.5; // 50% occurrence threshold
 
     /**
      * S-BL-001/002/003: 启动基线学习
@@ -60,14 +63,37 @@ public class BaselineService {
         baseline.setStatus("PENDING_REVIEW");
         baselineMapper.updateById(baseline);
 
+        saveItems(baseline.getId(), type, items);
+        return baseline;
+    }
+
+    /**
+     * S-BL-010: 获取基线列表(分页演示，Phase 2 暂做全量)
+     */
+    public List<Baseline> listBaselines(String type, String unit, String responsiblePerson) {
+        LambdaQueryWrapper<Baseline> query = new LambdaQueryWrapper<>();
+        if (type != null && !type.isEmpty() && !"ALL".equals(type)) {
+            query.eq(Baseline::getType, type);
+        }
+        if (unit != null && !unit.isEmpty()) {
+            query.eq(Baseline::getUnit, unit);
+        }
+        if (responsiblePerson != null && !responsiblePerson.isEmpty()) {
+            query.eq(Baseline::getResponsiblePerson, responsiblePerson);
+        }
+        query.orderByDesc(Baseline::getLearningEnd);
+        return baselineMapper.selectList(query);
+    }
+
+    private void saveItems(String baselineId, String type, List<Map<String, Object>> items) {
         // 清除旧的基线项
         baselineItemMapper.delete(
-                new LambdaQueryWrapper<BaselineItem>().eq(BaselineItem::getBaselineId, baseline.getId()));
+                new LambdaQueryWrapper<BaselineItem>().eq(BaselineItem::getBaselineId, baselineId));
 
         // 插入新的基线项
         for (Map<String, Object> item : items) {
             BaselineItem bi = new BaselineItem();
-            bi.setBaselineId(baseline.getId());
+            bi.setBaselineId(baselineId);
             bi.setItemKey(buildItemKey(type, item));
             try {
                 bi.setItemData(objectMapper.writeValueAsString(item));
@@ -76,7 +102,82 @@ public class BaselineService {
             }
             baselineItemMapper.insert(bi);
         }
-        return baseline;
+    }
+
+    /**
+     * S-BL-009: 时序频率分析学习 (Phase 6 核心)
+     */
+    @Transactional
+    public void learnFromHistory(String agentId, String type) {
+        Baseline baseline = baselineMapper.selectOne(
+                new LambdaQueryWrapper<Baseline>()
+                        .eq(Baseline::getAgentId, agentId)
+                        .eq(Baseline::getType, type)
+                        .eq(Baseline::getStatus, "LEARNING"));
+
+        if (baseline == null)
+            return;
+
+        LocalDateTime startTime = baseline.getLearningStart();
+        LocalDateTime endTime = LocalDateTime.now();
+
+        // 1. 获取历史记录
+        List<Map<String, Object>> rawRecords = assetServiceClient.getAssetHistory(agentId, startTime, endTime);
+        if (rawRecords.isEmpty())
+            return;
+
+        // 2. 按时间戳分组 (模拟快照次数)
+        Map<String, List<Map<String, Object>>> snapshots = new HashMap<>();
+        for (Map<String, Object> record : rawRecords) {
+            String updateTime = (String) record.get("lastUpdated");
+            if (updateTime != null) {
+                snapshots.computeIfAbsent(updateTime, k -> new ArrayList<>()).add(record);
+            }
+        }
+
+        int totalSnapshots = snapshots.size();
+        if (totalSnapshots == 0)
+            return;
+
+        // 3. 统计每个项的出现频率
+        Map<String, Integer> keyCountMap = new HashMap<>();
+        Map<String, Map<String, Object>> keyDataMap = new HashMap<>();
+
+        for (List<Map<String, Object>> snapshotItems : snapshots.values()) {
+            Set<String> keysInSnapshot = new HashSet<>();
+            for (Map<String, Object> itemRecord : snapshotItems) {
+                try {
+                    String assetDataStr = (String) itemRecord.get("assetData");
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> data = objectMapper.readValue(assetDataStr, Map.class);
+                    String key = buildItemKey(type, data);
+                    keysInSnapshot.add(key);
+                    keyDataMap.put(key, data);
+                } catch (Exception ignored) {
+                }
+            }
+            for (String key : keysInSnapshot) {
+                keyCountMap.put(key, keyCountMap.getOrDefault(key, 0) + 1);
+            }
+        }
+
+        // 4. 筛选高频项
+        List<Map<String, Object>> filteredItems = new ArrayList<>();
+        for (var entry : keyCountMap.entrySet()) {
+            double frequency = (double) entry.getValue() / totalSnapshots;
+            if (frequency >= FREQUENCY_THRESHOLD) {
+                filteredItems.add(keyDataMap.get(entry.getKey()));
+            }
+        }
+
+        // 5. 更新基线
+        saveItems(baseline.getId(), type, filteredItems);
+        baseline.setStatus("PENDING_REVIEW");
+        baseline.setLearningEnd(endTime);
+        baselineMapper.updateById(baseline);
+
+        log.info("Baseline learning completed for {} types {}. total snapshots: {}, items: {}",
+                agentId, type, totalSnapshots, filteredItems.size());
     }
 
     /**

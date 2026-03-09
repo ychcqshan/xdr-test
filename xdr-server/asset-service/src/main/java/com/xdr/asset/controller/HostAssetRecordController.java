@@ -19,4 +19,15 @@ public class HostAssetRecordController {
         hostAssetRecordService.syncAssets(request);
         return ApiResponse.ok();
     }
+
+    /** S-ASSET-010: 获取指定时间点的资产快照 (Time-travel) */
+    @GetMapping("/timeline")
+    public ApiResponse<java.util.List<com.xdr.asset.model.HostAssetRecord>> getTimeline(
+            @RequestParam String agentId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime timestamp) {
+        if (timestamp == null) {
+            return ApiResponse.ok(hostAssetRecordService.getCurrentSnapshot(agentId));
+        }
+        return ApiResponse.ok(hostAssetRecordService.getTimelineSnapshot(agentId, timestamp));
+    }
 }

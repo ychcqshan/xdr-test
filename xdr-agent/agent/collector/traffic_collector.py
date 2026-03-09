@@ -36,6 +36,7 @@ class TrafficCollector(BaseCollector):
         self._sniffer_thread.start()
 
     def collect(self):
+        now_ts = datetime.now().isoformat()
         with self.lock:
             snapshot = []
             for (src, dst, dport, proto), count in self.connections.items():
@@ -44,14 +45,15 @@ class TrafficCollector(BaseCollector):
                     "dstIp": dst,
                     "dstPort": dport,
                     "protocol": proto,
-                    "count": count
+                    "count": count,
+                    "timestamp": now_ts
                 })
             # 重置计数，保证每次上报增量或近期活跃连接
             self.connections.clear()
             
         return {
-            "traffic": snapshot,
-            "timestamp": datetime.now().isoformat()
+            "connections": snapshot,
+            "timestamp": now_ts
         }
 
     def stop(self):

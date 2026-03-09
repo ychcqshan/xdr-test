@@ -2,6 +2,7 @@ package com.xdr.asset.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xdr.asset.dto.GraphDTO;
+import com.xdr.asset.model.Asset;
 import com.xdr.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,8 +34,8 @@ public class TopologyService {
         // 1. 获取所有Agent的基础IP信息（作为核心节点）
         // 这里简化处理：从 asset-service 获取所有在线/离线资产
         // 实际中可能需要分页或全量，Phase 2 先做全量演示
-        var assets = assetService.listAssets(1, 1000, null, null, null, null).getRecords();
-        for (var asset : assets) {
+        List<Asset> assets = assetService.listAssets(1, 1000, null, null, null, null, null, null).getRecords();
+        for (Asset asset : assets) {
             String id = asset.getIpAddress();
             if (id != null && nodeIds.add(id)) {
                 nodes.add(new GraphDTO.Node(id, asset.getHostname() != null ? asset.getHostname() : id, "ASSET"));

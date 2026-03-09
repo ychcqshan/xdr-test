@@ -17,4 +17,5 @@ public class AssetDetailDTO {
     private List<Map<String, Object>> softwares;
     private List<Map<String, Object>> usbDevices;
     private List<Map<String, Object>> logins;
+    private List<Map<String, Object>> traffic;
 }

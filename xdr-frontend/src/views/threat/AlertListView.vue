@@ -28,8 +28,14 @@
             <el-option label="低危" value="LOW" />
           </el-select>
         </el-form-item>
+        <el-form-item label="责任人">
+          <el-input v-model="filters.responsiblePerson" placeholder="搜索责任人" clearable class="elite-input" style="width: 140px;" />
+        </el-form-item>
+        <el-form-item label="所属单位">
+          <el-input v-model="filters.unit" placeholder="搜索单位" clearable class="elite-input" style="width: 160px;" />
+        </el-form-item>
         <el-form-item label="处理状态">
-          <el-select v-model="filters.status" placeholder="所有状态" clearable class="elite-select">
+          <el-select v-model="filters.status" placeholder="所有状态" clearable class="elite-select" style="width: 120px;">
             <el-option label="待处理" value="NEW" />
             <el-option label="进行中" value="ACKNOWLEDGED" />
             <el-option label="已闭环" value="RESOLVED" />
@@ -81,9 +87,12 @@
 
           <el-table-column prop="agentId" label="受影响端点" width="180">
             <template #default="{ row }">
-              <span class="text-muted-sm">{{ row.agentId }}</span>
+              <span class="text-primary-bold-sm">{{ row.hostname || row.agentId?.substring(0, 12) }}</span>
             </template>
           </el-table-column>
+
+          <el-table-column prop="unit" label="所属单位" width="140" show-overflow-tooltip />
+          <el-table-column prop="responsiblePerson" label="责任人" width="100" />
 
           <el-table-column prop="createdAt" label="发现时间" width="180" />
 
@@ -185,7 +194,13 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const currentAlert = ref<any>(null)
 
-const filters = reactive({ level: '', status: '', threatType: '' })
+const filters = reactive({ 
+  level: '', 
+  status: '', 
+  threatType: '',
+  unit: '',
+  responsiblePerson: ''
+})
 
 onMounted(() => loadData())
 

@@ -7,12 +7,9 @@ import com.xdr.asset.mapper.AssetMapper;
 import com.xdr.asset.mapper.UserInfoMapper;
 import com.xdr.asset.model.Asset;
 import com.xdr.asset.model.UserInfo;
-import com.xdr.common.dto.ApiResponse;
 import com.xdr.common.dto.PageResponse;
 import com.xdr.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpMethod;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -28,10 +25,8 @@ public class AssetService {
 
     private final AssetMapper assetMapper;
     private final UserInfoMapper userInfoMapper;
-    private final org.springframework.web.client.RestTemplate restTemplate;
+    private final com.xdr.asset.service.HostAssetRecordService hostAssetRecordService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
-
-    private static final String THREAT_SERVICE_URL = "http://localhost:8084";
 
     /**
      * S-ASSET-001: 资产自动注册/更新 (心跳时调用)
@@ -76,7 +71,7 @@ public class AssetService {
      * S-ASSET-004: 资产搜索筛选(分页)
      */
     public PageResponse<Asset> listAssets(int page, int size, String keyword,
-            String osType, String status, String groupId) {
+            String osType, String status, String groupId, String unit, String responsiblePerson) {
         LambdaQueryWrapper<Asset> query = new LambdaQueryWrapper<>();
 
         if (StringUtils.hasText(keyword)) {
@@ -93,6 +88,12 @@ public class AssetService {
         }
         if (StringUtils.hasText(groupId)) {
             query.eq(Asset::getGroupId, groupId);
+        }
+        if (StringUtils.hasText(unit)) {
+            query.eq(Asset::getUnit, unit);
+        }
+        if (StringUtils.hasText(responsiblePerson)) {
+            query.eq(Asset::getResponsiblePerson, responsiblePerson);
         }
 
         query.orderByDesc(Asset::getLastHeartbeat);
@@ -152,9 +153,10 @@ public class AssetService {
     }
 
     /**
-     * S-ASSET-002: 资产聚合详情 (Phase 2)
+     * S-ASSET-002: 资产聚合详情 (Phase 2, 6, 11 & 15)
      */
-    public AssetDetailDTO getAggregatedAssetDetail(String agentId) {
+    public AssetDetailDTO getAggregatedAssetDetail(String agentId, java.time.LocalDateTime startTime,
+            java.time.LocalDateTime endTime) {
         Asset asset = assetMapper.selectOne(new LambdaQueryWrapper<Asset>().eq(Asset::getAgentId, agentId));
         if (asset == null)
             throw new BusinessException("资产不存在");
@@ -172,38 +174,62 @@ public class AssetService {
         detail.setSoftwares(new ArrayList<>());
         detail.setUsbDevices(new ArrayList<>());
         detail.setLogins(new ArrayList<>());
+        detail.setTraffic(new ArrayList<>());
 
-        // 从 threat-service 获取细粒度资产
-        try {
-            ApiResponse<List<Map<String, Object>>> response = restTemplate.exchange(
-                    THREAT_SERVICE_URL + "/api/v1/host-assets/" + agentId,
-                    HttpMethod.GET,
-                    null,
-                    new ParameterizedTypeReference<ApiResponse<List<Map<String, Object>>>>() {
-                    }).getBody();
-
-            if (response != null && response.getData() != null) {
-                for (Map<String, Object> hostAsset : response.getData()) {
-                    String type = (String) hostAsset.get("assetType");
-                    String dataJson = (String) hostAsset.get("assetData");
-                    try {
-                        Map<String, Object> data = objectMapper.readValue(dataJson, Map.class);
-                        switch (type) {
-                            case "PROCESS" -> detail.getProcesses().add(data);
-                            case "NETWORK" -> detail.getPorts().add(data);
-                            case "SOFTWARE" -> detail.getSoftwares().add(data);
-                            case "USB" -> detail.getUsbDevices().add(data);
-                            case "LOGIN" -> detail.getLogins().add(data);
-                        }
-                    } catch (Exception e) {
-                        // ignore parsing error for single item
-                    }
-                }
+        // 1. 获取基础库存快照 (PROCESS, NETWORK, SOFTWARE)
+        List<com.xdr.asset.model.HostAssetRecord> inventoryRecords = hostAssetRecordService.getCurrentSnapshot(agentId);
+        for (com.xdr.asset.model.HostAssetRecord record : inventoryRecords) {
+            String type = record.getAssetType();
+            if ("USB".equals(type) || "LOGIN".equals(type) || "TRAFFIC".equals(type)) {
+                continue; // Skip event assets here, they will be handled separately
             }
-        } catch (Exception e) {
-            // 降级使用基础信息
+            try {
+                Map<String, Object> data = objectMapper.readValue(record.getAssetData(), Map.class);
+                switch (type) {
+                    case "PROCESS" -> detail.getProcesses().add(data);
+                    case "NETWORK" -> detail.getPorts().add(data);
+                    case "SOFTWARE" -> detail.getSoftwares().add(data);
+                }
+            } catch (Exception e) {
+                /* ignore */ }
         }
 
+        // 2. 获取事件类资产的历史记录 (USB, LOGIN, TRAFFIC) - 如果有时间范围则全量取，否则取最近 50 条
+        populateEventAssets(agentId, "USB", detail.getUsbDevices(), startTime, endTime);
+        populateEventAssets(agentId, "LOGIN", detail.getLogins(), startTime, endTime);
+        populateEventAssets(agentId, "TRAFFIC", detail.getTraffic(), startTime, endTime);
+
         return detail;
+    }
+
+    private void populateEventAssets(String agentId, String type, List<Map<String, Object>> targetList,
+            java.time.LocalDateTime startTime, java.time.LocalDateTime endTime) {
+        List<com.xdr.asset.model.HostAssetRecord> eventRecords;
+        if (startTime != null && endTime != null) {
+            // DB-side filtering by type
+            eventRecords = hostAssetRecordService.getHistoryRecords(agentId, type, startTime, endTime);
+        } else {
+            eventRecords = hostAssetRecordService.getRecentEvents(agentId, type, 50);
+        }
+
+        for (com.xdr.asset.model.HostAssetRecord record : eventRecords) {
+            try {
+                Map<String, Object> data = objectMapper.readValue(record.getAssetData(), Map.class);
+                targetList.add(data);
+            } catch (Exception e) {
+                /* ignore */ }
+        }
+    }
+
+    public List<com.xdr.asset.model.HostAssetRecord> getTimelineSnapshot(String agentId, LocalDateTime timestamp) {
+        if (timestamp == null) {
+            return hostAssetRecordService.getCurrentSnapshot(agentId);
+        }
+        return hostAssetRecordService.getTimelineSnapshot(agentId, timestamp);
+    }
+
+    public List<com.xdr.asset.model.HostAssetRecord> getHistoryRecords(String agentId, LocalDateTime startTime,
+            LocalDateTime endTime) {
+        return hostAssetRecordService.getHistoryRecords(agentId, startTime, endTime);
     }
 }

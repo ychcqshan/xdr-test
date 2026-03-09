@@ -1,4 +1,4 @@
-package com.xdr.threat.filter;
+package com.xdr.common.filter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;
@@ -27,11 +27,10 @@ public class GzipDecompressionFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String contentEncoding = request.getHeader("Content-Encoding");
-        System.out.println(
-                "GzipDecompressionFilter process path: " + request.getRequestURI() + ", encoding: " + contentEncoding);
 
+        // Log to common log if possible, but for now stdout/stderr for visibility
         if (contentEncoding != null && contentEncoding.toLowerCase().contains("gzip")) {
-            System.out.println("Decompressing GZIP request...");
+            System.out.println("Decompressing GZIP request for URI: " + request.getRequestURI());
             filterChain.doFilter(new GzipRequestWrapper(request), response);
         } else {
             filterChain.doFilter(request, response);

@@ -17,6 +17,15 @@ public class BaselineController {
 
     private final BaselineService baselineService;
 
+    /** S-BL-010: 获取基线列表 */
+    @GetMapping
+    public ApiResponse<List<Baseline>> listBaselines(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String unit,
+            @RequestParam(required = false) String responsiblePerson) {
+        return ApiResponse.ok(baselineService.listBaselines(type, unit, responsiblePerson));
+    }
+
     /** S-BL-001/002/003: 启动基线学习 */
     @PostMapping("/{agentId}/{type}/learn")
     public ApiResponse<Baseline> startLearning(
@@ -24,6 +33,15 @@ public class BaselineController {
             @PathVariable String type,
             @RequestParam(defaultValue = "168") int durationHours) {
         return ApiResponse.ok(baselineService.startLearning(agentId, type, durationHours));
+    }
+
+    /** S-BL-009: 强制完成学习并从历史记录生成基线 (Phase 6) */
+    @PostMapping("/{agentId}/{type}/learn/complete")
+    public ApiResponse<Void> completeLearning(
+            @PathVariable String agentId,
+            @PathVariable String type) {
+        baselineService.learnFromHistory(agentId, type);
+        return ApiResponse.ok();
     }
 
     /** S-BL-004: 导入当前系统为基线 */

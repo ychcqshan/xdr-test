@@ -1,0 +1,10 @@
+﻿2026-03-05 20:22:05 [WARNING] xdr-agent - 发送失败 /api/v1/events: 500 Server Error: Internal Server Error for url: http://localhost:8080/api/v1/events, 缓存到本地
+2026-03-05 20:22:25 [WARNING] xdr-agent - 发送失败 /api/v1/events: 500 Server Error: Internal Server Error for url: http://localhost:8080/api/v1/events, 缓存到本地
+2026-03-05 20:23:05 [WARNING] xdr-agent - 发送失败 /api/v1/events: 500 Server Error: Internal Server Error for url: http://localhost:8080/api/v1/events, 缓存到本地
+2026-03-05 20:23:24 [WARNING] xdr-agent - 发送失败 /api/v1/events: 500 Server Error: Internal Server Error for url: http://localhost:8080/api/v1/events, 缓存到本地
+2026-03-05 20:24:04 [WARNING] xdr-agent - 发送失败 /api/v1/events: 500 Server Error: Internal Server Error for url: http://localhost:8080/api/v1/events, 缓存到本地
+2026-03-05 20:24:20 [WARNING] xdr-agent - 发送失败 /api/v1/events: 500 Server Error: Internal Server Error for url: http://localhost:8080/api/v1/events, 缓存到本地
+2026-03-05 20:25:02 [WARNING] xdr-agent - 发送失败 /api/v1/events: 500 Server Error: Internal Server Error for url: http://localhost:8080/api/v1/events, 缓存到本地
+2026-03-05 20:25:19 [WARNING] xdr-agent - 发送失败 /api/v1/events: 500 Server Error: Internal Server Error for url: http://localhost:8080/api/v1/events, 缓存到本地
+2026-03-05 20:26:01 [WARNING] xdr-agent - 发送失败 /api/v1/events: 500 Server Error: Internal Server Error for url: http://localhost:8080/api/v1/events, 缓存到本地
+2026-03-05 20:26:22 [WARNING] xdr-agent - 发送失败 /api/v1/events: 500 Server Error: Internal Server Error for url: http://localhost:8080/api/v1/events, 缓存到本地

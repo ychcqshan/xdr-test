@@ -15,21 +15,26 @@ class IncrementalManager:
         if not os.path.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
         self.state_file = os.path.join(self.cache_dir, "incremental_state.json")
-        self.last_state = self._load_state()
+        self.state_data = self._load_state()
+        self.last_state = self.state_data.get("categories", {})
+        self.last_full_sync = self.state_data.get("last_full_sync", {})
 
-    def _load_state(self) -> Dict[str, Dict[str, Any]]:
+    def _load_state(self) -> Dict[str, Any]:
         if os.path.exists(self.state_file):
             try:
                 with open(self.state_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"加载增量状态失败: {e}")
-        return {}
+        return {"categories": {}, "last_full_sync": {}}
 
     def _save_state(self):
         try:
             with open(self.state_file, 'w', encoding='utf-8') as f:
-                json.dump(self.last_state, f, ensure_ascii=False, indent=2)
+                json.dump({
+                    "categories": self.last_state,
+                    "last_full_sync": self.last_full_sync
+                }, f, ensure_ascii=False, indent=2)
         except Exception as e:
             logger.error(f"保存增量状态失败: {e}")
 
@@ -41,6 +46,9 @@ class IncrementalManager:
         :param key_fields: 用于生成唯一键的字段列表
         :return: (report_type, diff_items)
         """
+        import time
+        now = time.time()
+        
         # 生成当前快照字典
         current_map = {}
         for item in current_data:
@@ -49,12 +57,17 @@ class IncrementalManager:
 
         # 获取历史快照
         category_state = self.last_state.get(category)
+        last_sync_time = self.last_full_sync.get(category, 0)
         
-        # 如果没有历史快照，或者是第一次运行，返回全量
-        if not category_state:
+        # 如果没有历史快照，或者距离上次全量同步超过 1 小时 (3600秒)
+        force_full = (now - last_sync_time > 3600)
+
+        if not category_state or force_full:
             self.last_state[category] = current_map
+            self.last_full_sync[category] = now
             self._save_state()
-            logger.info(f"[{category}] 首次上报，执行 FULL 模式, 项数: {len(current_data)}")
+            reason = "首次上报" if not category_state else "周期性自愈"
+            logger.info(f"[{category}] {reason}，执行 FULL 模式, 项数: {len(current_data)}")
             return "FULL", current_data
 
         history_map = category_state
@@ -67,8 +80,7 @@ class IncrementalManager:
                 item_copy['action'] = 'ADD'
                 diff_items.append(item_copy)
             else:
-                # 2. 检查是否有显著更新 (UPDATE) - 目前只对比整体，后续可降精
-                # 排除可能经常变动的字段如 cpuPercent, memoryPercent
+                # 2. 检查是否有显著更新 (UPDATE)
                 h_item = history_map[key]
                 significant_change = False
                 for k, v in item.items():
@@ -97,11 +109,13 @@ class IncrementalManager:
             logger.debug(f"[{category}] 无变化，跳过上报")
             return "NONE", []
             
-        logger.info(f"[{category}] 计算由于增量变化: {len(diff_items)} 项, 执行 INCREMENTAL 模式")
+        logger.info(f"[{category}] 计算到增量变化: {len(diff_items)} 项, 执行 INCREMENTAL 模式")
         return "INCREMENTAL", diff_items
 
     def force_full_sync(self, category: str):
         """强制下次进行全量同步"""
         if category in self.last_state:
             del self.last_state[category]
-            self._save_state()
+        if category in self.last_full_sync:
+            del self.last_full_sync[category]
+        self._save_state()

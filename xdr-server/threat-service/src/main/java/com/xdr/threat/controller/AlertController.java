@@ -24,8 +24,11 @@ public class AlertController {
             @RequestParam(required = false) String level,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String agentId,
-            @RequestParam(required = false) String threatType) {
-        return ApiResponse.ok(alertService.listAlerts(page, size, level, status, agentId, threatType));
+            @RequestParam(required = false) String threatType,
+            @RequestParam(required = false) String unit,
+            @RequestParam(required = false) String responsiblePerson) {
+        return ApiResponse
+                .ok(alertService.listAlerts(page, size, level, status, agentId, threatType, unit, responsiblePerson));
     }
 
     /** 告警详情 */

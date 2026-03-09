@@ -1,4 +1,5 @@
 rules:
+  # --- 凭据窃取与执行 (Credential Access & Execution) ---
   - name: "PsExec Detection"
     pattern: "psexec"
     severity: "HIGH"
@@ -6,11 +7,49 @@ rules:
     pattern: "mimikatz|sekurlsa|logonpasswords"
     severity: "CRITICAL"
   - name: "Encoded PowerShell"
-    pattern: "powershell.*-enc|powershell.*-encodedcommand"
+    pattern: "powershell.*-(enc|encodedcommand|e\\s+)"
     severity: "MEDIUM"
+  - name: "MSHTA Execution"
+    pattern: "mshta.*(http|javascript|vbscript)"
+    severity: "HIGH"
+  - name: "Certutil Downloader"
+    pattern: "certutil.*-urlcache.*-f"
+    severity: "HIGH"
+
+  # --- 权限提升 (Privilege Escalation) ---
+  - name: "Privilege Audit (whoami /priv)"
+    pattern: "whoami\\s+/priv"
+    severity: "MEDIUM"
+  - name: "UAC Bypass / CMSTP"
+    pattern: "cmstp\\.exe.*/s.*/ni"
+    severity: "HIGH"
+
+  # --- 持久化 (Persistence) ---
+  - name: "Scheduled Task Creation"
+    pattern: "schtasks.*/create.*/(sc|tr)"
+    severity: "MEDIUM"
+  - name: "Registry Run Key Persistence"
+    pattern: "reg\\s+add.*\\\\CurrentVersion\\\\Run"
+    severity: "HIGH"
+
+  # --- 环境发现与横向移动 (Discovery & Lateral Movement) ---
+  - name: "Network View / AD Discovery"
+    pattern: "net\\s+view|net\\s+group|net\\s+localgroup\\s+administrators"
+    severity: "LOW"
+  - name: "ARP Scan / Network Discovery"
+    pattern: "arp\\s+-a|netstat\\s+-ano|ipconfig\\s+/all"
+    severity: "LOW"
   - name: "WMI Lateral Movement"
     pattern: "wmic.*process.*call.*create"
     severity: "HIGH"
-  - name: "Cobalt Strike / Beacon"
+
+  # --- 防御规避 (Defense Evasion) ---
+  - name: "Event Log Clearing"
+    pattern: "wevtutil\\s+cl\\s+Security|wevtutil\\s+cl\\s+System"
+    severity: "CRITICAL"
+  - name: "Volume Shadow Copy Deletion"
+    pattern: "vssadmin\\s+delete\\s+shadows"
+    severity: "CRITICAL"
+  - name: "Process Hollowing / Injection"
     pattern: "spawnas|inject|shinject"
     severity: "CRITICAL"
