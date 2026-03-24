@@ -141,7 +141,7 @@ public class HostAssetRecordService {
         } else if ("LOGIN".equals(type)) {
             return item.get("userName") + "|" + item.get("terminal") + "|" + item.get("loginTime");
         } else if ("TRAFFIC".equals(type)) {
-            String base = item.get("srcIp") + "|" + item.get("dstIp") + "|" + item.get("dstPort") + "|"
+            String base = item.get("srcIp") + "|" + item.get("srcPort") + "|" + item.get("dstIp") + "|" + item.get("dstPort") + "|"
                     + item.get("protocol");
             String ts = String.valueOf(item.getOrDefault("timestamp", ""));
             return ts.isEmpty() ? base : base + "|" + ts;
@@ -190,7 +190,7 @@ public class HostAssetRecordService {
                 .ge(HostAssetRecord::getLastUpdated, timestamp));
     }
 
-    public List<HostAssetRecord> getHistoryRecords(String agentId, String assetType, LocalDateTime startTime,
+    public List<HostAssetRecord> findHistoryByQuery(String agentId, String assetType, LocalDateTime startTime,
             LocalDateTime endTime) {
         LambdaQueryWrapper<HostAssetRecord> query = new LambdaQueryWrapper<HostAssetRecord>()
                 .eq(HostAssetRecord::getAgentId, agentId)

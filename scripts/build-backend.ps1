@@ -2,44 +2,35 @@
 $ErrorActionPreference = "Stop"
 
 $rootPath = "e:\project\xdr-test\xdr-server"
+$scriptPath = "e:\project\xdr-test\scripts"
+$stopScript = "$scriptPath\stop-backend.ps1"
 
 Write-Host "--- XDR Backend Build Program ---" -ForegroundColor Cyan
-Write-Host "[*] Starting clean build for all microservices..." -ForegroundColor Yellow
 
-# 1. Check Java Environment
-try {
-    java -version
-}
-catch {
-    Write-Error "Java not found in PATH. Please ensure JDK 17+ is installed."
-    exit
-}
+# 1. 环境检查
+if (!(Get-Command java -ErrorAction SilentlyContinue)) { Write-Error "Java not found."; exit 1 }
+if (!(Get-Command mvn -ErrorAction SilentlyContinue)) { Write-Error "Maven not found."; exit 1 }
 
-# 2. Check Maven Environment
-try {
-    mvn -version
-}
-catch {
-    Write-Error "Maven not found in PATH. Please ensure Maven is installed and configured."
-    exit
+# 2. 构建前清理
+Write-Host "[*] Checking for running backend processes..." -ForegroundColor Yellow
+$running = Get-NetTCPConnection -LocalPort 8080,8081,8082,8083,8084,8085,8086,8087 -State Listen -ErrorAction SilentlyContinue
+if ($running) {
+    Write-Host "[!] Detected running services. Stopping..." -ForegroundColor Yellow
+    powershell -ExecutionPolicy Bypass -File "$stopScript"
 }
 
-# 3. Build Project
-cd $rootPath
-
-Write-Host "[*] Executing 'mvn clean install -DskipTests' in $rootPath" -ForegroundColor Yellow
-mvn clean install -DskipTests
+# 3. 执行编译 (使用 cmd /c 以获得最强 Maven 兼容性)
+Set-Location $rootPath
+Write-Host "[*] Executing 'mvn clean install -DskipTests'..." -ForegroundColor Yellow
+cmd /c "mvn clean install -DskipTests"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "==========================================" -ForegroundColor Cyan
-    Write-Host "[OK] All backend services successfully built and packaged!" -ForegroundColor Green
-    Write-Host "JAR files are generated in the target/ directory of each respective module."
-}
-else {
-    Write-Host "==========================================" -ForegroundColor Red
-    Write-Host "[!] Build failed. Please check the Maven output logs above." -ForegroundColor Red
+    Write-Host "[OK] All backend services built!" -ForegroundColor Green
+} else {
+    Write-Error "Build failed with exit code $LASTEXITCODE"
+    exit $LASTEXITCODE
 }
 
-Write-Host ""
-Write-Host "Press any key to exit this script..."
+Write-Host "Press any key to exit..."
 Read-Host

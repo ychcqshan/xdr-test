@@ -73,8 +73,8 @@ class UserInfoManager:
         conn.close()
         
         # 上报后端 S-ASSET-008
-        self.comm.post(f'/api/v1/assets/{agent_id}/user-info', data, compress=False)
-        logger.info("用户信息已保存并上报")
+        self.comm.post(f'/api/v1/assets/{agent_id}/asset-user', data, compress=False)
+        logger.info("资产用户信息已保存并上报")
 
     def get_user_info(self):
         agent_id = get_agent_id()

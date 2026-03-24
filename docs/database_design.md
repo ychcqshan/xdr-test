@@ -17,7 +17,7 @@ erDiagram
     asset ||--o{ event : "reports"
     asset ||--o{ response_command : "executes"
     asset ||--o{ upgrade_task : "assigned"
-    asset ||--|| user_info : "belongs_to"
+    asset ||--|| asset_user : "belongs_to"
     asset }o--|| asset_group : "groups"
     baseline ||--o{ baseline_item : "contains"
     upgrade_package ||--o{ upgrade_task : "references"
@@ -30,19 +30,25 @@ erDiagram
 ## 2. 数据库详细规格
 
 ### 2.1 认证鉴权库 (`xdr_auth`)
-**用途**: 存储云端管理平台用户信息及权限根数据。
+**用途**: 存储具备登录权限的运维管理人员信息，支持多级组织机构。
 
-#### 表: `sys_user` (系统用户表)
+#### 表: `user_info` (后台用户表)
 | 字段名 | 类型 | 描述 | 约束 |
 | :--- | :--- | :--- | :--- |
-| `id` | VARCHAR(36) | 全局唯一标识 (UUID) | PRIMARY KEY |
-| `username` | VARCHAR(50) | 登录用户名 | UNIQUE, NOT NULL |
-| `password` | VARCHAR(255) | BCrypt 加密后的散列值 | NOT NULL |
-| `real_name` | VARCHAR(50) | 真实姓名 | - |
-| `email` | VARCHAR(100) | 电子邮箱 | - |
-| `phone` | VARCHAR(20) | 联系电话 | - |
-| `role` | VARCHAR(20) | 用户角色 (ADMIN/AUDITOR/OPERATOR) | DEFAULT 'OPERATOR' |
-| `status` | INT | 账户状态 (0-禁用, 1-正常) | DEFAULT 1 |
+| `id` | VARCHAR(36) | 主键 (UUID) | PRIMARY KEY |
+| `login_name` | VARCHAR(50) | 登录账号 | UNIQUE, INDEX |
+| `password` | VARCHAR(255) | 加密密码 | NOT NULL |
+| `real_name` | VARCHAR(50) | 真实姓名 | NOT NULL |
+| `role` | VARCHAR(20) | ADMIN/OPERATOR/AUDITOR | - |
+| `unit_level1` | VARCHAR(100) | 集团公司 (一级) | INDEX |
+| `unit_level2` | VARCHAR(100) | 二级单位 | INDEX |
+| `unit_level3` | VARCHAR(100) | 三级单位 | - |
+| `unit_level4` | VARCHAR(100) | 四级单位 | - |
+| `department` | VARCHAR(100) | 部门 | - |
+| `post` | VARCHAR(50) | 岗位 | - |
+| `phone` | VARCHAR(20) | 手机号 | - |
+| `email` | VARCHAR(100) | 邮箱 | - |
+| `status` | INT | 状态 (1-启, 0-禁) | DEFAULT 1 |
 | `deleted` | INT | 逻辑删除标记 (0/1) | DEFAULT 0 |
 | `created_at` | DATETIME | 创建时间 | DEFAULT CURRENT_TIMESTAMP |
 | `updated_at` | DATETIME | 更新时间 | ON UPDATE CURRENT_TIMESTAMP |
@@ -66,8 +72,21 @@ erDiagram
 | `ip_address` | VARCHAR(50) | 当前上报 IP 地址 | - |
 | `status` | VARCHAR(20) | 在线状态 (ONLINE/OFFLINE) | INDEX, DEFAULT 'OFFLINE' |
 | `last_heartbeat`| DATETIME | 最近心跳时间 | - |
-| `unit` | VARCHAR(100) | 所属单位/部门属性 | INDEX |
-| `responsible_person`| VARCHAR(50) | 资产责任人姓名 | INDEX |
+#### 表: `asset_user` (资产用户表 - Agent 侧)
+**用途**: 维护 Agent 相关的用户组织架构数据（资产属性），与后台用户隔离。
+
+| 字段名 | 类型 | 描述 | 约束 |
+| :--- | :--- | :--- | :--- |
+| `id` | VARCHAR(36) | 主键 | PK |
+| `agent_id` | VARCHAR(50) | 关联 Agent | UNIQUE, INDEX |
+| `username` | VARCHAR(50) | 使用人姓名 | NOT NULL |
+| `unit_level1` | VARCHAR(100) | 集团公司 (一级) | INDEX |
+| `unit_level2` | VARCHAR(100) | 二级单位 | INDEX |
+| `unit_level3` | VARCHAR(100) | 三级单位 | - |
+| `unit_level4` | VARCHAR(100) | 四级单位 | - |
+| `department` | VARCHAR(100) | 部门 | - |
+| `post` | VARCHAR(50) | 岗位 | - |
+| `phone` | VARCHAR(20) | 手机号 | - |
 
 #### 表: `host_asset_record` (时序资产快照表)
 | 字段名 | 类型 | 描述 | 约束 |
@@ -87,7 +106,7 @@ erDiagram
 ---
 
 ### 2.3 基线管理库 (`xdr_baseline`)
-**用途**: 存储学习到的已知稳态配置，用于偏离检测。
+**用途**: 存储学习到的已知稳态配置，支持画像级比对（进程 -> 端口）。
 
 #### 表: `baseline` (基线配置主表)
 | 字段名 | 类型 | 描述 | 约束 |
@@ -99,6 +118,10 @@ erDiagram
 | `unit` | VARCHAR(100) | 所属单位 (用于多租户/部门隔离) | INDEX |
 | `responsible_person`| VARCHAR(50) | 责任人 | INDEX |
 | `learning_start` | DATETIME | 学习周期起始 | - |
+
+#### 表: `baseline_item` (基线条目表)
+- `item_key`: 维键指纹。对于 PORT 类，由 `port|protocol|processName` 构造。
+- `item_data`: 原始快照 JSON。
 
 ---
 

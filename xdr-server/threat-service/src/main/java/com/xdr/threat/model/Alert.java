@@ -25,6 +25,7 @@ public class Alert extends BaseEntity {
     private String resolveComment;
     private String responseStatus; // PENDING / EXECUTED / FAILED / CANCELED
     private String responseAction; // ISOLATE / TERMINATE_PROCESS / DELETE_FILE
-    private String unit;
+    private String unitLevel1;
+    private String unitLevel2;
     private String responsiblePerson;
 }

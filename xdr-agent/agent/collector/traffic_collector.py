@@ -21,9 +21,10 @@ class TrafficCollector(BaseCollector):
             src = pkt[IP].src
             dst = pkt[IP].dst
             proto = pkt[IP].proto
+            sport = pkt.sport if hasattr(pkt, 'sport') else 0
             dport = pkt.dport if hasattr(pkt, 'dport') else 0
             
-            key = (src, dst, dport, proto)
+            key = (src, sport, dst, dport, proto)
             with self.lock:
                 self.connections[key] = self.connections.get(key, 0) + 1
 
@@ -39,9 +40,10 @@ class TrafficCollector(BaseCollector):
         now_ts = datetime.now().isoformat()
         with self.lock:
             snapshot = []
-            for (src, dst, dport, proto), count in self.connections.items():
+            for (src, sport, dst, dport, proto), count in self.connections.items():
                 snapshot.append({
                     "srcIp": src,
+                    "srcPort": sport,
                     "dstIp": dst,
                     "dstPort": dport,
                     "protocol": proto,

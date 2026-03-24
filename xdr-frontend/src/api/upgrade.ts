@@ -1,13 +1,13 @@
 import request from './request'
 
 export function getUpgradePackages() {
-    return request.get('/api/v1/upgrades/packages')
+    return request.get('/upgrades/packages')
 }
 
 export function saveUpgradePackage(data: any) {
-    return request.post('/api/v1/upgrades/packages', data)
+    return request.post('/upgrades/packages', data)
 }
 
 export function getPendingUpgradeTask(agentId: string) {
-    return request.get(`/api/v1/upgrades/tasks/pending/${agentId}`)
+    return request.get(`/upgrades/tasks/pending/${agentId}`)
 }

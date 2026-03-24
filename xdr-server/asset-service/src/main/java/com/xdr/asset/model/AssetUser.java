@@ -7,12 +7,16 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@TableName("user_info")
-public class UserInfo extends BaseEntity {
+@TableName("asset_user")
+public class AssetUser extends BaseEntity {
     private String agentId;
-    private String realName;
+    private String username;
+    private String unitLevel1;
+    private String unitLevel2;
+    private String unitLevel3;
+    private String unitLevel4;
     private String department;
-    private String organization;
+    private String post;
     private String phone;
     private String email;
 }

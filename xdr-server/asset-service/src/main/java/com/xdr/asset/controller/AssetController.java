@@ -2,7 +2,7 @@ package com.xdr.asset.controller;
 
 import com.xdr.asset.dto.AssetDetailDTO;
 import com.xdr.asset.model.Asset;
-import com.xdr.asset.model.UserInfo;
+import com.xdr.asset.model.AssetUser;
 import com.xdr.asset.service.AssetService;
 import com.xdr.common.dto.ApiResponse;
 import com.xdr.common.dto.PageResponse;
@@ -28,10 +28,12 @@ public class AssetController {
             @RequestParam(required = false) String osType,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String groupId,
-            @RequestParam(required = false) String unit,
+            @RequestParam(required = false) String unitLevel1,
+            @RequestParam(required = false) String unitLevel2,
             @RequestParam(required = false) String responsiblePerson) {
         return ApiResponse
-                .ok(assetService.listAssets(page, size, keyword, osType, status, groupId, unit, responsiblePerson));
+                .ok(assetService.listAssets(page, size, keyword, osType, status, groupId, unitLevel1, unitLevel2,
+                        responsiblePerson));
     }
 
     /** S-ASSET-002: 资产详情 */
@@ -61,10 +63,10 @@ public class AssetController {
         return ApiResponse.ok(topologyService.getNetworkTopology());
     }
 
-    /** S-ASSET-008: 用户信息上报 */
-    @PostMapping("/{agentId}/user-info")
-    public ApiResponse<Void> saveUserInfo(@PathVariable String agentId, @RequestBody UserInfo info) {
-        assetService.saveUserInfo(agentId, info);
+    /** S-ASSET-008: 资产用户信息上报 (Agent侧) */
+    @PostMapping("/{agentId}/asset-user")
+    public ApiResponse<Void> saveAssetUser(@PathVariable String agentId, @RequestBody AssetUser info) {
+        assetService.saveAssetUser(agentId, info);
         return ApiResponse.ok();
     }
 
@@ -76,12 +78,12 @@ public class AssetController {
         return ApiResponse.ok(assetService.getTimelineSnapshot(agentId, timestamp));
     }
 
-    /** S-ASSET-011: 获取历史资产记录范围 (用于基线进化、频率分析) */
     @GetMapping("/{agentId}/history")
     public ApiResponse<java.util.List<com.xdr.asset.model.HostAssetRecord>> getAssetHistory(
             @PathVariable String agentId,
+            @RequestParam(required = false) String assetType,
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime startTime,
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime endTime) {
-        return ApiResponse.ok(assetService.getHistoryRecords(agentId, startTime, endTime));
+        return ApiResponse.ok(assetService.getHistoryRecords(agentId, assetType, startTime, endTime));
     }
 }

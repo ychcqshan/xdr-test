@@ -21,3 +21,6 @@ xdr-agent/cache.db
 # Logs
 logs/
 *.log
+
+# Database Dumps
+all.sql

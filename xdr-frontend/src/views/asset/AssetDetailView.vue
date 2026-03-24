@@ -106,9 +106,11 @@
                     <div class="info-section-elite">
                       <h4 class="section-title">权属与归属</h4>
                       <el-descriptions :column="1" class="elite-desc">
-                        <el-descriptions-item label="负责人">{{ details?.userInfo?.realName || '公共设备' }}</el-descriptions-item>
-                        <el-descriptions-item label="所属组织">{{ details?.userInfo?.department || '未分配部门' }}</el-descriptions-item>
-                        <el-descriptions-item label="联系方式">{{ details?.userInfo?.phone || '-' }}</el-descriptions-item>
+                        <el-descriptions-item label="负责人">{{ details?.assetUser?.username || details?.assetUser?.realName || '公共设备' }}</el-descriptions-item>
+                        <el-descriptions-item label="所属单位">{{ details?.assetUser?.unitLevel1 || '未分配' }}</el-descriptions-item>
+                        <el-descriptions-item label="二级单位">{{ details?.assetUser?.unitLevel2 || '-' }}</el-descriptions-item>
+                        <el-descriptions-item label="所属组织">{{ details?.assetUser?.department || '未分配' }}</el-descriptions-item>
+                        <el-descriptions-item label="联系方式">{{ details?.assetUser?.phone || '-' }}</el-descriptions-item>
                         <el-descriptions-item label="最后上报">刚刚</el-descriptions-item>
                       </el-descriptions>
                     </div>
@@ -315,12 +317,15 @@
                       {{ row.timestamp ? formatDateTime(row.timestamp) : '-' }}
                     </template>
                   </el-table-column>
-                  <el-table-column prop="srcIp" label="源 IP" width="160" />
+                   <el-table-column prop="srcIp" label="源 IP" width="160" />
+                  <el-table-column prop="srcPort" label="源端口" width="100" />
                   <el-table-column prop="dstIp" label="目的 IP" width="160" />
-                  <el-table-column prop="dstPort" label="端口" width="100" />
-                  <el-table-column prop="protocol" label="协议" width="100">
+                  <el-table-column prop="dstPort" label="目的端口" width="100" />
+                   <el-table-column prop="protocol" label="协议" width="100">
                     <template #default="{ row }">
-                      <el-tag size="small">{{ row.protocol === 6 ? 'TCP' : (row.protocol === 17 ? 'UDP' : row.protocol) }}</el-tag>
+                      <el-tag size="small" :type="getProtocolType(row.protocol)">
+                        {{ formatProtocol(row.protocol) }}
+                      </el-tag>
                     </template>
                   </el-table-column>
                   <el-table-column prop="count" label="连接计数" width="120" sortable />
@@ -359,14 +364,22 @@
         <div class="bento-card sidebar-stat-card">
           <h4 class="sidebar-title">安全评分</h4>
           <div class="score-circle-wrapper">
-            <div class="score-circle">
-              <span class="score-num">85</span>
-              <span class="score-unit">优秀</span>
+            <div class="score-circle" :style="{ borderColor: getRiskColor(asset?.riskScore) }">
+              <span class="score-num" :style="{ color: getRiskColor(asset?.riskScore) }">
+                {{ asset?.riskScore ?? 100 }}
+              </span>
+              <span class="score-unit">{{ getScoreLevel(asset?.riskScore) }}</span>
             </div>
           </div>
           <ul class="score-risk-list">
-            <li><span class="bullet warn"></span> 基线偏差: 2</li>
-            <li><span class="bullet secure"></span> 未处理告警: 0</li>
+            <li>
+              <span class="bullet" :class="details?.baselineDeviations > 0 ? 'warn' : 'secure'"></span>
+              基线偏差: {{ details?.baselineDeviations ?? 0 }}
+            </li>
+            <li>
+              <span class="bullet" :class="details?.activeAlerts > 0 ? 'danger' : 'secure'"></span>
+              未处理告警: {{ details?.activeAlerts ?? 0 }}
+            </li>
           </ul>
         </div>
       </el-col>
@@ -483,7 +496,7 @@ async function fetchHistoryData() {
     const historyRecords = res.data
     const newDetails = {
       baseInfo: asset.value,
-      userInfo: details.value?.userInfo, // Keep current user info for context
+      assetUser: details.value?.assetUser, // Keep current user info for context
       processes: [],
       ports: [],
       softwares: [],
@@ -519,6 +532,46 @@ function resetToRealtime() {
   selectedTime.value = ''
   isTimeMachineActive.value = false
   fetchData()
+}
+
+function getProtocolType(proto: number) {
+  switch (proto) {
+    case 6: return 'success'
+    case 17: return 'warning'
+    case 1: return 'danger'
+    default: return 'info'
+  }
+}
+
+function getScoreLevel(score: number) {
+  if (score >= 90) return '优秀'
+  if (score >= 80) return '良好'
+  if (score >= 60) return '预警'
+  return '危险'
+}
+
+function getRiskColor(score: number) {
+  if (score >= 90) return '#10B981' // Green
+  if (score >= 80) return '#3B82F6' // Blue
+  if (score >= 60) return '#F59E0B' // Orange
+  return '#EF4444' // Red
+}
+
+function formatProtocol(proto: number) {
+  const map: Record<number, string> = {
+    1: 'ICMP',
+    2: 'IGMP',
+    6: 'TCP',
+    17: 'UDP',
+    41: 'IPv6',
+    47: 'GRE',
+    50: 'ESP',
+    51: 'AH',
+    58: 'ICMPv6',
+    89: 'OSPF',
+    115: 'L2TP'
+  }
+  return map[proto] || `PROTO ${proto}`
 }
 
 function formatDateTime(val: string) {

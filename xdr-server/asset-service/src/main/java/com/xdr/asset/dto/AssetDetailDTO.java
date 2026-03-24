@@ -1,7 +1,7 @@
 package com.xdr.asset.dto;
 
 import com.xdr.asset.model.Asset;
-import com.xdr.asset.model.UserInfo;
+import com.xdr.asset.model.AssetUser;
 import lombok.Data;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +9,7 @@ import java.util.Map;
 @Data
 public class AssetDetailDTO {
     private Asset baseInfo;
-    private UserInfo userInfo;
+    private AssetUser assetUser;
 
     // 细粒度资产快照
     private List<Map<String, Object>> processes;
@@ -18,4 +18,8 @@ public class AssetDetailDTO {
     private List<Map<String, Object>> usbDevices;
     private List<Map<String, Object>> logins;
     private List<Map<String, Object>> traffic;
+
+    // 风险审计详情
+    private Integer baselineDeviations;
+    private Integer activeAlerts;
 }

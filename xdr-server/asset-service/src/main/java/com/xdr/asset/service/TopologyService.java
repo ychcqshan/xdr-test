@@ -34,7 +34,7 @@ public class TopologyService {
         // 1. 获取所有Agent的基础IP信息（作为核心节点）
         // 这里简化处理：从 asset-service 获取所有在线/离线资产
         // 实际中可能需要分页或全量，Phase 2 先做全量演示
-        List<Asset> assets = assetService.listAssets(1, 1000, null, null, null, null, null, null).getRecords();
+        List<Asset> assets = assetService.listAssets(1, 1000, null, null, null, null, null, null, null).getRecords();
         for (Asset asset : assets) {
             String id = asset.getIpAddress();
             if (id != null && nodeIds.add(id)) {

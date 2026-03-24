@@ -25,12 +25,16 @@ public class AssetServiceClient {
     @Value("${xdr.services.asset-url:http://localhost:8082}")
     private String assetServiceUrl;
 
-    public List<Map<String, Object>> getAssetHistory(String agentId, LocalDateTime startTime, LocalDateTime endTime) {
+    public List<Map<String, Object>> getAssetHistory(String agentId, String assetType, LocalDateTime startTime,
+            LocalDateTime endTime) {
         String url = String.format("%s/api/v1/assets/%s/history?startTime=%s&endTime=%s",
                 assetServiceUrl,
                 agentId,
                 startTime.format(DateTimeFormatter.ISO_DATE_TIME),
                 endTime.format(DateTimeFormatter.ISO_DATE_TIME));
+        if (assetType != null) {
+            url += "&assetType=" + assetType;
+        }
 
         try {
             ResponseEntity<ApiResponse<List<Map<String, Object>>>> response = restTemplate.exchange(

@@ -21,9 +21,10 @@ public class BaselineController {
     @GetMapping
     public ApiResponse<List<Baseline>> listBaselines(
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) String unit,
+            @RequestParam(required = false) String unitLevel1,
+            @RequestParam(required = false) String unitLevel2,
             @RequestParam(required = false) String responsiblePerson) {
-        return ApiResponse.ok(baselineService.listBaselines(type, unit, responsiblePerson));
+        return ApiResponse.ok(baselineService.listBaselines(type, unitLevel1, unitLevel2, responsiblePerson));
     }
 
     /** S-BL-001/002/003: 启动基线学习 */
@@ -101,5 +102,11 @@ public class BaselineController {
             @RequestBody Map<String, Object> itemData) {
         baselineService.addManualItem(agentId, type, itemData);
         return ApiResponse.ok();
+    }
+
+    /** S-BL-011: 获取指定 Agent 的基线统计信息 (用于安全评分) */
+    @GetMapping("/stats/{agentId}")
+    public ApiResponse<Map<String, Object>> getBaselineStats(@PathVariable String agentId) {
+        return ApiResponse.ok(baselineService.getBaselineStats(agentId));
     }
 }

@@ -6,14 +6,20 @@
 CREATE DATABASE IF NOT EXISTS xdr_auth DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE xdr_auth;
 
-CREATE TABLE IF NOT EXISTS sys_user (
+CREATE TABLE IF NOT EXISTS user_info (
     id VARCHAR(36) PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
+    login_name VARCHAR(50) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    real_name VARCHAR(50),
-    email VARCHAR(100),
-    phone VARCHAR(20),
+    real_name VARCHAR(50) NOT NULL,
     role VARCHAR(20) NOT NULL DEFAULT 'OPERATOR' COMMENT 'ADMIN/AUDITOR/OPERATOR',
+    unit_level1 VARCHAR(100) COMMENT '一级单位/集团',
+    unit_level2 VARCHAR(100) COMMENT '二级单位',
+    unit_level3 VARCHAR(100) COMMENT '三级单位',
+    unit_level4 VARCHAR(100) COMMENT '四级单位',
+    department VARCHAR(100) COMMENT '部门',
+    post VARCHAR(50) COMMENT '岗位',
+    phone VARCHAR(20),
+    email VARCHAR(100),
     status INT NOT NULL DEFAULT 1 COMMENT '0-禁用 1-正常',
     deleted INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -21,7 +27,7 @@ CREATE TABLE IF NOT EXISTS sys_user (
 );
 
 -- 默认管理员 (密码: admin123)
-INSERT IGNORE INTO sys_user (id, username, password, real_name, role, status, deleted)
+INSERT IGNORE INTO user_info (id, login_name, password, real_name, role, status, deleted)
 VALUES (UUID(), 'admin', '$2a$10$N.ZOn9MHSbEU0Oq6lZXaF.kXBqb0h.VDd7jqDeYRcP1XlVLYN9Cku', '系统管理员', 'ADMIN', 1, 0);
 
 -- =============================================
@@ -44,8 +50,11 @@ CREATE TABLE IF NOT EXISTS asset (
     agent_version VARCHAR(20),
     status VARCHAR(20) NOT NULL DEFAULT 'OFFLINE' COMMENT 'ONLINE/OFFLINE/UPGRADING',
     group_id VARCHAR(36),
+    unit_level1 VARCHAR(100),
+    unit_level2 VARCHAR(100),
     department VARCHAR(100),
-    risk_score INT DEFAULT 0 COMMENT '0-100风险评分',
+    responsible_person VARCHAR(50) COMMENT '资产责任人(由AssetUser映射)',
+    risk_score INT DEFAULT 100 COMMENT '0-100风险评分',
     last_heartbeat DATETIME,
     deleted INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -65,12 +74,16 @@ CREATE TABLE IF NOT EXISTS asset_group (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS user_info (
+CREATE TABLE IF NOT EXISTS asset_user (
     id VARCHAR(36) PRIMARY KEY,
     agent_id VARCHAR(50) NOT NULL UNIQUE,
-    real_name VARCHAR(50),
-    department VARCHAR(100),
-    organization VARCHAR(100),
+    username VARCHAR(50) NOT NULL COMMENT '终端使用人',
+    unit_level1 VARCHAR(100) COMMENT '一级单位/集团',
+    unit_level2 VARCHAR(100) COMMENT '二级单位',
+    unit_level3 VARCHAR(100) COMMENT '三级单位',
+    unit_level4 VARCHAR(100) COMMENT '四级单位',
+    department VARCHAR(100) COMMENT '部门',
+    post VARCHAR(50) COMMENT '岗位',
     phone VARCHAR(20),
     email VARCHAR(100),
     deleted INT NOT NULL DEFAULT 0,

@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.xdr.auth.dto.AgentRegisterRequest;
 import com.xdr.auth.dto.LoginRequest;
 import com.xdr.auth.dto.LoginResponse;
-import com.xdr.auth.mapper.SysUserMapper;
-import com.xdr.auth.model.SysUser;
+import com.xdr.auth.mapper.UserInfoMapper;
+import com.xdr.auth.model.UserInfo;
 import com.xdr.common.exception.BusinessException;
 import com.xdr.common.exception.UnauthorizedException;
 import com.xdr.common.util.JwtUtil;
@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final SysUserMapper userMapper;
+    private final UserInfoMapper userMapper;
     private final PasswordEncoder passwordEncoder;
     private final StringRedisTemplate redisTemplate;
 
@@ -44,17 +44,16 @@ public class AuthService {
      * 用户登录 - S-AUTH-001
      */
     public LoginResponse login(LoginRequest request) {
-        SysUser user = userMapper.selectOne(
-                new LambdaQueryWrapper<SysUser>()
-                        .eq(SysUser::getUsername, request.getUsername())
-                        .eq(SysUser::getStatus, 1)
-        );
+        UserInfo user = userMapper.selectOne(
+                new LambdaQueryWrapper<UserInfo>()
+                        .eq(UserInfo::getLoginName, request.getUsername())
+                        .eq(UserInfo::getStatus, 1));
 
         if (user == null) {
             System.err.println("LOGIN DEBUG: user is null!");
             throw new UnauthorizedException("用户名或密码错误");
         }
-        System.err.println("LOGIN DEBUG: Found user: " + user.getUsername());
+        System.err.println("LOGIN DEBUG: Found user: " + user.getLoginName());
         System.err.println("LOGIN DEBUG: DB Password: " + user.getPassword());
         System.err.println("LOGIN DEBUG: Req Password: " + request.getPassword());
         boolean matches = passwordEncoder.matches(request.getPassword(), user.getPassword());
@@ -68,15 +67,15 @@ public class AuthService {
         claims.put("role", user.getRole());
         claims.put("userId", user.getId());
 
-        String accessToken = getJwtUtil().generateToken(user.getUsername(), claims);
-        String refreshToken = getJwtUtil().generateRefreshToken(user.getUsername());
+        String accessToken = getJwtUtil().generateToken(user.getLoginName(), claims);
+        String refreshToken = getJwtUtil().generateRefreshToken(user.getLoginName());
 
         return new LoginResponse(
                 accessToken,
                 refreshToken,
-                user.getUsername(),
+                user.getLoginName(),
                 user.getRole(),
-                7200  // 2小时
+                7200 // 2小时
         );
     }
 
@@ -85,8 +84,7 @@ public class AuthService {
      */
     public void logout(String token) {
         redisTemplate.opsForValue().set(
-                "token:blacklist:" + token, "1", 2, TimeUnit.HOURS
-        );
+                "token:blacklist:" + token, "1", 2, TimeUnit.HOURS);
     }
 
     /**
@@ -98,11 +96,10 @@ public class AuthService {
         }
 
         String username = getJwtUtil().getSubject(refreshToken);
-        SysUser user = userMapper.selectOne(
-                new LambdaQueryWrapper<SysUser>()
-                        .eq(SysUser::getUsername, username)
-                        .eq(SysUser::getStatus, 1)
-        );
+        UserInfo user = userMapper.selectOne(
+                new LambdaQueryWrapper<UserInfo>()
+                        .eq(UserInfo::getLoginName, username)
+                        .eq(UserInfo::getStatus, 1));
 
         if (user == null) {
             throw new UnauthorizedException("用户不存在或已禁用");
@@ -112,16 +109,15 @@ public class AuthService {
         claims.put("role", user.getRole());
         claims.put("userId", user.getId());
 
-        String newAccessToken = getJwtUtil().generateToken(user.getUsername(), claims);
-        String newRefreshToken = getJwtUtil().generateRefreshToken(user.getUsername());
+        String newAccessToken = getJwtUtil().generateToken(user.getLoginName(), claims);
+        String newRefreshToken = getJwtUtil().generateRefreshToken(user.getLoginName());
 
         return new LoginResponse(
                 newAccessToken,
                 newRefreshToken,
-                user.getUsername(),
+                user.getLoginName(),
                 user.getRole(),
-                7200
-        );
+                7200);
     }
 
     /**
@@ -141,6 +137,29 @@ public class AuthService {
         result.put("agentId", agentId);
         result.put("token", agentToken);
         return result;
+    }
+
+    /**
+     * 获取用户信息 - S-AUTH-005
+     */
+    public UserInfo me(String userId) {
+        return userMapper.selectById(userId);
+    }
+
+    /**
+     * 用户管理列表 - S-AUTH-006 (Admin Only)
+     */
+    public java.util.List<UserInfo> listUsers() {
+        return userMapper.selectList(new LambdaQueryWrapper<UserInfo>().orderByDesc(UserInfo::getCreatedAt));
+    }
+
+    /**
+     * 创建后台用户 - S-AUTH-007 (Admin Only)
+     */
+    public void createUser(UserInfo user) {
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setStatus(1);
+        userMapper.insert(user);
     }
 
     /**

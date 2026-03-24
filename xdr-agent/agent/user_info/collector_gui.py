@@ -12,25 +12,29 @@ class UserInfoCollectorGUI:
         self.on_submit = on_submit
         self.root = tk.Tk()
         self.root.title("XDR Agent - 首次运行配置")
-        self.root.geometry("400x350")
+        self.root.geometry("400x480")
         self.root.resizable(False, False)
         
         # 居中显示
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
         x = (screen_width / 2) - (400 / 2)
-        y = (screen_height / 2) - (350 / 2)
-        self.root.geometry(f'400x350+{int(x)}+{int(y)}')
+        y = (screen_height / 2) - (480 / 2)
+        self.root.geometry(f'400x480+{int(x)}+{int(y)}')
 
         self._create_widgets()
 
     def _create_widgets(self):
-        tk.Label(self.root, text="请完善用户信息以完成Agent注册", font=("微软雅黑", 12, "bold")).pack(pady=10)
+        tk.Label(self.root, text="请完善用户信息以完成资产注册", font=("微软雅黑", 12, "bold")).pack(pady=10)
         
         fields = [
-            ("真实姓名:", "realName"),
-            ("部门:", "department"),
-            ("单位名称:", "organization"),
+            ("一级单位(集团):", "unitLevel1"),
+            ("二级单位:", "unitLevel2"),
+            ("三级单位:", "unitLevel3"),
+            ("四级单位:", "unitLevel4"),
+            ("所属部门:", "department"),
+            ("用户岗位:", "post"),
+            ("使用人姓名:", "username"),
             ("手机号:", "phone"),
             ("常用邮箱:", "email")
         ]
@@ -39,7 +43,7 @@ class UserInfoCollectorGUI:
         for label_text, key in fields:
             frame = tk.Frame(self.root)
             frame.pack(fill='x', padx=20, pady=5)
-            tk.Label(frame, text=label_text, width=10, anchor='e').pack(side='left')
+            tk.Label(frame, text=label_text, width=12, anchor='e').pack(side='left')
             entry = tk.Entry(frame)
             entry.pack(side='left', fill='x', expand=True, padx=5)
             self.entries[key] = entry
@@ -50,12 +54,12 @@ class UserInfoCollectorGUI:
         data = {k: v.get().strip() for k, v in self.entries.items()}
         
         # 简单校验
-        if not data['realName'] or not data['phone']:
-            messagebox.showwarning("输入项错误", "姓名和手机号为必填项")
+        if not data['unitLevel1'] or not data['username'] or not data['phone']:
+            messagebox.showwarning("输入项错误", "单位、姓名和手机号为必填项")
             return
             
         self.on_submit(data)
-        messagebox.showinfo("成功", "信息已采集并上报")
+        messagebox.showinfo("成功", "资产用户信息已采集并上报")
         self.root.destroy()
 
     def run(self):

@@ -3,6 +3,9 @@ $ErrorActionPreference = "Stop"
 
 $rootPath = "e:\project\xdr-test\xdr-server"
 $logDir = "e:\project\xdr-test\logs"
+$scriptPath = "e:\project\xdr-test\scripts"
+$stopScript = "$scriptPath\stop-backend.ps1"
+
 $services = @(
     @{ name = "auth-service"; path = "auth-service"; port = 8081 },
     @{ name = "asset-service"; path = "asset-service"; port = 8082 },
@@ -14,67 +17,52 @@ $services = @(
     @{ name = "api-gateway"; path = "api-gateway"; port = 8080 }
 )
 
-Write-Host "--- XDR Backend Startup Program ---" -ForegroundColor Cyan
+Write-Host "--- XDR Backend Startup Program (Enhanced) ---" -ForegroundColor Cyan
 
-# 0. Create log directory
-if (!(Test-Path $logDir)) {
-    New-Item -ItemType Directory -Path $logDir | Out-Null
-    Write-Host "[OK] Created log directory: $logDir" -ForegroundColor Green
-}
+# 1. 强力清理
+Write-Host "[*] Cleaning up environment..." -ForegroundColor Yellow
+powershell -ExecutionPolicy Bypass -File "$stopScript"
 
-# 1. Check Java Environment
-try {
-    java -version
-}
-catch {
-    Write-Error "Java not found in PATH. Please ensure JDK 17+ is installed."
-    exit
-}
+# 2. 检查日志目录
+if (!(Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir | Out-Null }
 
-# 2. Build Project if needed - check all JAR files exist
-Write-Host "[*] Checking build status..." -ForegroundColor Yellow
-cd $rootPath
-$needBuild = $false
-foreach ($svc in $services) {
-    $jarFile = "$rootPath\$($svc.path)\target\$($svc.name)-1.0.0-SNAPSHOT.jar"
-    if (!(Test-Path $jarFile)) {
-        Write-Host "[!] Missing JAR: $($svc.name)" -ForegroundColor Red
-        $needBuild = $true
-    }
-}
-if ($needBuild) {
-    Write-Host "[!] Some JAR files are missing. Running 'mvn clean install -DskipTests'..." -ForegroundColor Yellow
-    mvn clean install -DskipTests
-}
-else {
-    Write-Host "[OK] All JAR files are ready." -ForegroundColor Green
-}
-
-# 3. Start Services with log redirection
+# 3. 逐个启动
 foreach ($svc in $services) {
     $jarFile = "$rootPath\$($svc.path)\target\$($svc.name)-1.0.0-SNAPSHOT.jar"
     $logFile = "$logDir\$($svc.name).log"
     $errFile = "$logDir\$($svc.name)-error.log"
 
-    Write-Host "[+] Starting $($svc.name) (Port: $($svc.port)), log -> $logFile" -ForegroundColor Green
+    if (!(Test-Path $jarFile)) {
+        Write-Host "[!] Missing JAR for $($svc.name). Build first." -ForegroundColor Red
+        continue
+    }
 
-    # Start each service, redirect stdout+stderr to log file (hidden window)
-    $argList = "-jar `"$jarFile`""
-    Start-Process java -ArgumentList $argList -WorkingDirectory "$rootPath\$($svc.path)" -WindowStyle Hidden `
+    Write-Host "[+] Starting $($svc.name) (Port $($svc.port))..." -ForegroundColor Cyan
+    Start-Process java -ArgumentList "-jar `"$jarFile`"" -WorkingDirectory "$rootPath\$($svc.path)" -WindowStyle Hidden `
         -RedirectStandardOutput $logFile -RedirectStandardError $errFile
 
-    # Delay to prevent port conflicts or excessive CPU usage
-    Start-Sleep -Seconds 5
+    # 4. 健康轮询
+    $timeout = 45; $elapsed = 0; $success = $false
+    Write-Host "    Waiting..." -NoNewline
+    while ($elapsed -lt $timeout) {
+        if (Get-NetTCPConnection -LocalPort $svc.port -State Listen -ErrorAction SilentlyContinue) {
+            $success = $true; break
+        }
+        Write-Host "." -NoNewline; Start-Sleep -Seconds 2; $elapsed += 2
+    }
+
+    if ($success) {
+        Write-Host " [OK]" -ForegroundColor Green
+    } else {
+        Write-Host " [FAILED]" -ForegroundColor Red
+        if ($svc.name -eq "auth-service" -or $svc.name -eq "api-gateway") {
+            Write-Error "Critical service $($svc.name) failed to start."
+            exit 1
+        }
+    }
 }
 
-Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "All startup requests sent."
-Write-Host "Gateway URL: http://localhost:8080"
-Write-Host "Log directory: $logDir" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "View logs with:" -ForegroundColor Yellow
-Write-Host "  Get-Content $logDir\api-gateway.log -Tail 50 -Wait"
-Write-Host "  Get-Content $logDir\auth-service.log -Tail 50 -Wait"
-Write-Host ""
-Write-Host "Press any key to exit this script (backend will keep running)..."
-Read-Host
+Write-Host "`n==========================================" -ForegroundColor Cyan
+Write-Host "XDR Backend cluster is ready!" -ForegroundColor Green
+Write-Host "Gateway: http://localhost:8080"
+Read-Host "Press Enter to exit..."

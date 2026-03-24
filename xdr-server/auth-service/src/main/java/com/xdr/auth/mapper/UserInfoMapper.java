@@ -1,7 +1,7 @@
-package com.xdr.asset.mapper;
+package com.xdr.auth.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.xdr.asset.model.UserInfo;
+import com.xdr.auth.model.UserInfo;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper

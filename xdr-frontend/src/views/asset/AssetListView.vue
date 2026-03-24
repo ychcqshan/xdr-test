@@ -27,7 +27,7 @@
             </el-select>
           </el-form-item>
           <el-form-item label="所属单位">
-            <el-input v-model="filters.unit" placeholder="输入单位名称" clearable style="width:140px;" />
+            <el-input v-model="filters.unitLevel1" placeholder="输入单位名称" clearable style="width:140px;" />
           </el-form-item>
           <el-form-item label="责任人">
             <el-input v-model="filters.responsiblePerson" placeholder="姓名查找" clearable style="width:120px;" />
@@ -93,7 +93,7 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="unit" label="所属单位" width="140" />
+        <el-table-column prop="unitLevel1" label="所属单位" width="140" />
         <el-table-column prop="responsiblePerson" label="责任人" width="100" />
         
         <el-table-column prop="ipAddress" label="局域网地址" width="160">
@@ -111,7 +111,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="riskScore" label="安全健康水位" width="180">
+        <el-table-column prop="riskScore" label="安全评分" width="180">
           <template #default="{ row }">
             <div class="risk-meter">
               <el-progress
@@ -164,7 +164,7 @@ const filters = reactive({
   keyword: '', 
   osType: '', 
   status: '',
-  unit: '',
+  unitLevel1: '',
   responsiblePerson: ''
 })
 

@@ -23,6 +23,17 @@ class NetworkCollector(BaseCollector):
                 local = f"{conn.laddr.ip}:{conn.laddr.port}" if conn.laddr else ""
                 remote = f"{conn.raddr.ip}:{conn.raddr.port}" if conn.raddr else ""
 
+                # 关联进程信息
+                process_name = ""
+                process_path = ""
+                if conn.pid:
+                    try:
+                        p = psutil.Process(conn.pid)
+                        process_name = p.name()
+                        process_path = p.exe()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+
                 result.append({
                     'localAddr': local,
                     'remoteAddr': remote,
@@ -30,6 +41,8 @@ class NetworkCollector(BaseCollector):
                     'status': conn.status,
                     'pid': conn.pid or 0,
                     'port': conn.laddr.port if conn.laddr else 0,
+                    'processName': process_name,
+                    'processPath': process_path
                 })
             except Exception:
                 continue

@@ -1,12 +1,14 @@
 package com.xdr.asset.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.xdr.asset.dto.AssetDetailDTO;
 import com.xdr.asset.mapper.AssetMapper;
-import com.xdr.asset.mapper.UserInfoMapper;
+import com.xdr.asset.mapper.AssetUserMapper;
 import com.xdr.asset.model.Asset;
-import com.xdr.asset.model.UserInfo;
+import com.xdr.asset.model.AssetUser;
 import com.xdr.common.dto.PageResponse;
 import com.xdr.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
@@ -24,9 +26,12 @@ import java.util.Map;
 public class AssetService {
 
     private final AssetMapper assetMapper;
-    private final UserInfoMapper userInfoMapper;
+    private final AssetUserMapper assetUserMapper;
     private final com.xdr.asset.service.HostAssetRecordService hostAssetRecordService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    private final com.xdr.asset.client.ThreatServiceClient threatServiceClient;
+    private final com.xdr.asset.client.BaselineServiceClient baselineServiceClient;
 
     /**
      * S-ASSET-001: 资产自动注册/更新 (心跳时调用)
@@ -59,6 +64,18 @@ public class AssetService {
         asset.setStatus("ONLINE");
         asset.setLastHeartbeat(LocalDateTime.now());
 
+        // 动态计算安全健康分 (Phase 16 核心)
+        asset.setRiskScore(calculateHealthScore(agentId));
+
+        // 补齐权属信息：如果 AssetUser 表已有数据，则同步过来 (解决注册顺序导致的缺失问题)
+        AssetUser userInfo = assetUserMapper.selectOne(new LambdaQueryWrapper<AssetUser>().eq(AssetUser::getAgentId, agentId));
+        if (userInfo != null) {
+            asset.setUnitLevel1(userInfo.getUnitLevel1());
+            asset.setUnitLevel2(userInfo.getUnitLevel2());
+            asset.setDepartment(userInfo.getDepartment());
+            asset.setResponsiblePerson(userInfo.getUsername());
+        }
+
         if (asset.getId() == null) {
             assetMapper.insert(asset);
         } else {
@@ -68,10 +85,51 @@ public class AssetService {
     }
 
     /**
+     * S-ASSET-012: 资产动态评分模型
+     * 健康分 = 100 - (告警权重分 + 基线偏离分 + 下线惩罚)
+     */
+    private int calculateHealthScore(String agentId) {
+        int score = 100;
+
+        // 1. 告警扣分
+        try {
+            List<Map<String, Object>> alerts = threatServiceClient.getActiveAlerts(agentId);
+            for (Map<String, Object> alert : alerts) {
+                String level = (String) alert.get("level");
+                score -= switch (level) {
+                    case "CRITICAL" -> 40;
+                    case "HIGH" -> 20;
+                    case "MEDIUM" -> 10;
+                    case "LOW" -> 5;
+                    default -> 0;
+                };
+            }
+        } catch (Exception e) {
+            /* fallback */ }
+
+        // 2. 基线偏离扣分
+        try {
+            Map<String, Object> baselineStats = baselineServiceClient.getBaselineStatus(agentId);
+            if (baselineStats != null && baselineStats.containsKey("details")) {
+                Map<String, Integer> details = (Map<String, Integer>) baselineStats.get("details");
+                for (Integer count : details.values()) {
+                    if (count > 0) {
+                        score -= 15; // 每个存在偏离的基线类型扣15分
+                    }
+                }
+            }
+        } catch (Exception e) {
+            /* fallback */ }
+
+        return Math.max(0, score);
+    }
+
+    /**
      * S-ASSET-004: 资产搜索筛选(分页)
      */
     public PageResponse<Asset> listAssets(int page, int size, String keyword,
-            String osType, String status, String groupId, String unit, String responsiblePerson) {
+            String osType, String status, String groupId, String unitLevel1, String unitLevel2,
+            String responsiblePerson) {
         LambdaQueryWrapper<Asset> query = new LambdaQueryWrapper<>();
 
         if (StringUtils.hasText(keyword)) {
@@ -89,8 +147,11 @@ public class AssetService {
         if (StringUtils.hasText(groupId)) {
             query.eq(Asset::getGroupId, groupId);
         }
-        if (StringUtils.hasText(unit)) {
-            query.eq(Asset::getUnit, unit);
+        if (StringUtils.hasText(unitLevel1)) {
+            query.eq(Asset::getUnitLevel1, unitLevel1);
+        }
+        if (StringUtils.hasText(unitLevel2)) {
+            query.eq(Asset::getUnitLevel2, unitLevel2);
         }
         if (StringUtils.hasText(responsiblePerson)) {
             query.eq(Asset::getResponsiblePerson, responsiblePerson);
@@ -129,17 +190,27 @@ public class AssetService {
     }
 
     /**
-     * S-ASSET-008: 保存/更新用户信息
+     * S-ASSET-008: 保存/更新资产用户信息 (联动同步至资产表)
      */
-    public void saveUserInfo(String agentId, UserInfo info) {
-        UserInfo existing = userInfoMapper.selectOne(
-                new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getAgentId, agentId));
+    public void saveAssetUser(String agentId, AssetUser info) {
+        AssetUser existing = assetUserMapper.selectOne(
+                new LambdaQueryWrapper<AssetUser>().eq(AssetUser::getAgentId, agentId));
         info.setAgentId(agentId);
         if (existing == null) {
-            userInfoMapper.insert(info);
+            assetUserMapper.insert(info);
         } else {
             info.setId(existing.getId());
-            userInfoMapper.updateById(info);
+            assetUserMapper.updateById(info);
+        }
+
+        // 联动同步至 Asset 表，确保列表页数据准确 (冗余存储以换取查询性能)
+        Asset asset = assetMapper.selectOne(new LambdaQueryWrapper<Asset>().eq(Asset::getAgentId, agentId));
+        if (asset != null) {
+            asset.setUnitLevel1(info.getUnitLevel1());
+            asset.setUnitLevel2(info.getUnitLevel2());
+            asset.setDepartment(info.getDepartment());
+            asset.setResponsiblePerson(info.getUsername());
+            assetMapper.updateById(asset);
         }
     }
 
@@ -165,8 +236,8 @@ public class AssetService {
         detail.setBaseInfo(asset);
 
         // 获取用户信息
-        detail.setUserInfo(userInfoMapper.selectOne(
-                new LambdaQueryWrapper<UserInfo>().eq(UserInfo::getAgentId, agentId)));
+        detail.setAssetUser(assetUserMapper.selectOne(
+                new LambdaQueryWrapper<AssetUser>().eq(AssetUser::getAgentId, agentId)));
 
         // 初始化列表
         detail.setProcesses(new ArrayList<>());
@@ -198,6 +269,30 @@ public class AssetService {
         populateEventAssets(agentId, "USB", detail.getUsbDevices(), startTime, endTime);
         populateEventAssets(agentId, "LOGIN", detail.getLogins(), startTime, endTime);
         populateEventAssets(agentId, "TRAFFIC", detail.getTraffic(), startTime, endTime);
+        
+        // 3. 风险聚合数据 (侧边栏动态化)
+        try {
+            List<Map<String, Object>> alerts = threatServiceClient.getActiveAlerts(agentId);
+            detail.setActiveAlerts(alerts != null ? alerts.size() : 0);
+            
+            Map<String, Object> baselineStats = baselineServiceClient.getBaselineStatus(agentId);
+            if (baselineStats != null && baselineStats.containsKey("details")) {
+                Map<String, Integer> baselineDetails = objectMapper.convertValue(
+                    baselineStats.get("details"), 
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Integer>>() {}
+                );
+                int deviations = 0;
+                for (Integer count : baselineDetails.values()) {
+                    if (count != null) deviations += count;
+                }
+                detail.setBaselineDeviations(deviations);
+            } else {
+                detail.setBaselineDeviations(0);
+            }
+        } catch (Exception e) {
+            detail.setActiveAlerts(0);
+            detail.setBaselineDeviations(0);
+        }
 
         return detail;
     }
@@ -207,7 +302,7 @@ public class AssetService {
         List<com.xdr.asset.model.HostAssetRecord> eventRecords;
         if (startTime != null && endTime != null) {
             // DB-side filtering by type
-            eventRecords = hostAssetRecordService.getHistoryRecords(agentId, type, startTime, endTime);
+            eventRecords = hostAssetRecordService.findHistoryByQuery(agentId, type, startTime, endTime);
         } else {
             eventRecords = hostAssetRecordService.getRecentEvents(agentId, type, 50);
         }
@@ -228,8 +323,8 @@ public class AssetService {
         return hostAssetRecordService.getTimelineSnapshot(agentId, timestamp);
     }
 
-    public List<com.xdr.asset.model.HostAssetRecord> getHistoryRecords(String agentId, LocalDateTime startTime,
-            LocalDateTime endTime) {
-        return hostAssetRecordService.getHistoryRecords(agentId, startTime, endTime);
+    public List<com.xdr.asset.model.HostAssetRecord> getHistoryRecords(String agentId, String assetType,
+            LocalDateTime startTime, LocalDateTime endTime) {
+        return hostAssetRecordService.findHistoryByQuery(agentId, assetType, startTime, endTime);
     }
 }

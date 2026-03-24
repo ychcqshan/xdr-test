@@ -25,8 +25,9 @@ public class Asset extends BaseEntity {
     private String agentVersion;
     private String status; // ONLINE / OFFLINE / UPGRADING
     private String groupId;
+    private String unitLevel1;
+    private String unitLevel2;
     private String department;
-    private String unit;
     private String responsiblePerson;
     private Integer riskScore;
     private LocalDateTime lastHeartbeat;
