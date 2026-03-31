@@ -1,0 +1,21 @@
+﻿Field	Type	Null	Key	Default	Extra
+id	varchar(36)	NO	PRI	NULL	
+agent_id	varchar(50)	NO	MUL	NULL	
+level	varchar(20)	NO	MUL	NULL	
+status	varchar(20)	NO	MUL	NEW	
+threat_type	varchar(50)	YES		NULL	
+title	varchar(200)	YES		NULL	
+description	text	YES		NULL	
+raw_event	json	YES		NULL	
+attack_chain_id	varchar(36)	YES		NULL	
+priority	int	YES		0	
+response_status	varchar(50)	YES		PENDING	
+response_action	varchar(50)	YES		NULL	
+resolved_at	datetime	YES		NULL	
+resolved_by	varchar(50)	YES		NULL	
+resolve_comment	text	YES		NULL	
+deleted	int	NO		0	
+created_at	datetime	NO	MUL	CURRENT_TIMESTAMP	DEFAULT_GENERATED
+updated_at	datetime	NO		CURRENT_TIMESTAMP	DEFAULT_GENERATED on update CURRENT_TIMESTAMP
+unit	varchar(100)	YES		NULL	
+responsible_person	varchar(50)	YES		NULL	

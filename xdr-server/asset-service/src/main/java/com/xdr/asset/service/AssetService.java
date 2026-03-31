@@ -111,6 +111,7 @@ public class AssetService {
         try {
             Map<String, Object> baselineStats = baselineServiceClient.getBaselineStatus(agentId);
             if (baselineStats != null && baselineStats.containsKey("details")) {
+                @SuppressWarnings("unchecked")
                 Map<String, Integer> details = (Map<String, Integer>) baselineStats.get("details");
                 for (Integer count : details.values()) {
                     if (count > 0) {
@@ -255,7 +256,7 @@ public class AssetService {
                 continue; // Skip event assets here, they will be handled separately
             }
             try {
-                Map<String, Object> data = objectMapper.readValue(record.getAssetData(), Map.class);
+                Map<String, Object> data = objectMapper.readValue(record.getAssetData(), new TypeReference<Map<String, Object>>() {});
                 switch (type) {
                     case "PROCESS" -> detail.getProcesses().add(data);
                     case "NETWORK" -> detail.getPorts().add(data);
@@ -309,7 +310,7 @@ public class AssetService {
 
         for (com.xdr.asset.model.HostAssetRecord record : eventRecords) {
             try {
-                Map<String, Object> data = objectMapper.readValue(record.getAssetData(), Map.class);
+                Map<String, Object> data = objectMapper.readValue(record.getAssetData(), new TypeReference<Map<String, Object>>() {});
                 targetList.add(data);
             } catch (Exception e) {
                 /* ignore */ }
@@ -326,5 +327,18 @@ public class AssetService {
     public List<com.xdr.asset.model.HostAssetRecord> getHistoryRecords(String agentId, String assetType,
             LocalDateTime startTime, LocalDateTime endTime) {
         return hostAssetRecordService.findHistoryByQuery(agentId, assetType, startTime, endTime);
+    }
+
+    /** 获取入侵排查报告历史 */
+    public List<Map<String, Object>> getIntrusionReports(String agentId) {
+        List<com.xdr.asset.model.HostAssetRecord> records = hostAssetRecordService.getRecentEvents(agentId, "INTRUSION_REPORT", 10);
+        List<Map<String, Object>> reports = new ArrayList<>();
+        for (com.xdr.asset.model.HostAssetRecord record : records) {
+            try {
+                Map<String, Object> data = objectMapper.readValue(record.getAssetData(), new TypeReference<Map<String, Object>>() {});
+                reports.add(data);
+            } catch (Exception e) { /* ignore */ }
+        }
+        return reports;
     }
 }

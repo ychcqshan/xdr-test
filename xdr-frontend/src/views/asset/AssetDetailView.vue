@@ -341,6 +341,10 @@
                 </div>
               </div>
             </el-tab-pane>
+
+            <el-tab-pane label="入侵排查" name="intrusion">
+              <IntrusionReport :agent-id="agentId" />
+            </el-tab-pane>
           </el-tabs>
         </div>
       </el-col>
@@ -391,11 +395,14 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { getAssetDetail, getAssetDetails, getAssetTimeline } from '@/api/asset'
+import { ElMessage } from 'element-plus'
 import { 
   Platform, Refresh, ArrowLeft, UserFilled,
-  InfoFilled, Calendar, Connection, Monitor
+  InfoFilled, Calendar, Connection, Monitor,
+  Search
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
+import IntrusionReport from './components/IntrusionReport.vue'
 
 const route = useRoute()
 const assetId = route.params.id as string
@@ -490,10 +497,15 @@ function toggleTimeMachine() {
 
 async function fetchHistoryData() {
   if (!selectedTime.value) return
+  loading.value = true
   try {
     const res = await getAssetTimeline(agentId, selectedTime.value)
     // Convert HostAssetRecord list to details format
     const historyRecords = res.data
+    if (!historyRecords || historyRecords.length === 0) {
+      ElMessage.info('该时间点暂无历史快照数据')
+      return
+    }
     const newDetails = {
       baseInfo: asset.value,
       assetUser: details.value?.assetUser, // Keep current user info for context
@@ -522,9 +534,18 @@ async function fetchHistoryData() {
       } catch (e) { /* skip */ }
     })
     details.value = newDetails
+    // Reset all pagination
     processPage.value = 1
+    networkPage.value = 1
+    softwarePage.value = 1
+    usbPage.value = 1
+    loginPage.value = 1
+    trafficPage.value = 1
   } catch (e) {
     console.error('Failed to fetch history', e)
+    ElMessage.error('获取历史快照失败')
+  } finally {
+    loading.value = false
   }
 }
 

@@ -16,6 +16,7 @@ from agent.collector.host_collector import HostCollector
 from agent.collector.port_collector import PortCollector
 from agent.collector.extra_collectors import ExtraCollector
 from agent.collector.traffic_collector import TrafficCollector
+from agent.collector.forensic_collector import ForensicCollector
 from agent.comm.comm_manager import CommManager
 from agent.core.incremental_manager import IncrementalManager
 
@@ -32,6 +33,7 @@ matcher: SignatureMatcher = None
 collectors = []
 detectors = []
 traffic_collector: TrafficCollector = None
+forensic_collector: ForensicCollector = None
 
 def report_alert(alert):
     """告警上报回调"""
@@ -162,6 +164,14 @@ def poll_and_execute_commands():
                         success = True
                     else:
                         error_msg = f"文件 {path} 不存在"
+                elif cmd_type == "INTRUSION_SCAN":
+                    # 手动触发深度取证扫描
+                    if forensic_collector:
+                        scan_res = forensic_collector.collect()
+                        comm.report_event(event_type="INTRUSION_REPORT", event_data=scan_res, priority="HIGH")
+                        success = True
+                    else:
+                        error_msg = "ForensicCollector 未初始化"
                 else:
                     error_msg = f"不支持的指令类型: {cmd_type}"
             except Exception as e:
@@ -205,7 +215,7 @@ def send_heartbeat():
     comm.heartbeat(data)
 
 def main():
-    global logger, comm, collectors, incremental, traffic_collector, matcher
+    global logger, comm, collectors, incremental, traffic_collector, matcher, forensic_collector
 
     load_config()
     logger = setup_logger()
@@ -297,12 +307,14 @@ def main():
     traffic_collector.start_sniffing()
 
     # 3. 初始化周期采集器
-    from agent.collector.host_collector import HostCollector
-    from agent.collector.port_collector import PortCollector
+    proc_coll = ProcessCollector()
+    port_coll = PortCollector()
+    forensic_collector = ForensicCollector(proc_coll, port_coll)
+    
     collectors = [
-        ProcessCollector(),
+        proc_coll,
         HostCollector(),
-        PortCollector(),
+        port_coll,
         ExtraCollector(),
         traffic_collector
     ]
@@ -320,6 +332,14 @@ def main():
     scheduler.add_job(collect_and_report, 'interval', seconds=60, id='collect')
     scheduler.add_job(send_heartbeat, 'interval', seconds=300, id='heartbeat')
     scheduler.add_job(poll_and_execute_commands, 'interval', seconds=10, id='commands')
+    
+    # 深度取证定期执行 (每 1 小时)
+    def periodic_forensic():
+        if forensic_collector:
+            res = forensic_collector.collect()
+            comm.report_event(event_type="INTRUSION_REPORT", event_data=res, priority="LOW")
+            
+    scheduler.add_job(periodic_forensic, 'interval', seconds=3600, id='forensic_periodic')
 
     logger.info("XDR Agent Phase 2 运行中...")
 

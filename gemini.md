@@ -80,14 +80,14 @@
 ## 🚀 4. 当前进度快照
 * **Phase 1 [完成]**: MVP 构建（端 - 后端 - 前端打通）。
 * **Phase 2 [完成]**: 高级检测与增强采集（进程、网络流量全覆盖，勒索与基准线检测机制落盘），前端 Fintech Elite 顶级视觉重构。
-* **Phase 3 [完成]**: 资产生命周期管理基础建设。
-  * ✅ 数据库模型升维 (`xdr_asset.host_asset_record` 模型设计完成)。
+* **Phase 5 [完成]**: 终端入侵痕迹排查分析（深度取证 + 自动化告警 + Bento Grid 报告展示）。
+* **Phase 4 [完成]**: 资产时序管理与服务重构。
+  * ✅ 数据库模型升维 (`xdr_asset.host_asset_record` 模型设计、物理建表)。
   * ✅ 跨服务一致性修复 (RestTemplate 注入与 Gateway 白名单放行)。
   * ✅ Agent 重注册与用户信息 GUI 采集逻辑。
-* **Phase 4 [进行中]**: 资产管理服务重构与演进 (Time-Series Tracking)。
-  * 🔲 数据库表物理创建 (`host_asset_record`)。
-  * 🔲 解析逻辑从 `threat-service` 迁移至 `asset-service`。
-  * 🔲 引入时序 Upsert 算法与 Inactive 状态自动流转。
-  * 🔲 后端 `/timeline` 时序查询 API。
-  * 🔲 前端历史快照时间机器控件。
-* **Phase 5 [规划中]**: 基础设施升级 (Kafka + Elasticsearch 支撑等保合规)，全网态势可观测性。
+  * ✅ 基于指纹的 Upsert 算法 + Inactive 自动流转 (30天清理)。
+  * ✅ 解析逻辑从 `threat-service` 迁移至 `asset-service` (`/internal/sync_raw` 原生透传)。
+  * ✅ 后端 `/timeline` 时序查询 API。
+  * ✅ 前端历史快照时间机器控件。
+* **Phase 3 [规划中]**: 基础设施升级 (Kafka + Elasticsearch 支撑等保合规)，全网态势可观测性。
+* **Phase 6 [规划中]**: 生态集成与深度溯源 (标准 API/SDK + UEBA + 智能基线)。

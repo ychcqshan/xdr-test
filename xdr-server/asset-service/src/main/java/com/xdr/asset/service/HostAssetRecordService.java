@@ -24,7 +24,7 @@ public class HostAssetRecordService {
     private final ObjectMapper objectMapper;
 
     private boolean isEventAsset(String type) {
-        return "USB".equals(type) || "LOGIN".equals(type) || "TRAFFIC".equals(type);
+        return "USB".equals(type) || "LOGIN".equals(type) || "TRAFFIC".equals(type) || "INTRUSION_REPORT".equals(type);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -145,6 +145,10 @@ public class HostAssetRecordService {
                     + item.get("protocol");
             String ts = String.valueOf(item.getOrDefault("timestamp", ""));
             return ts.isEmpty() ? base : base + "|" + ts;
+        } else if ("INTRUSION_REPORT".equals(type)) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> summary = (Map<String, Object>) item.get("summary");
+            return summary != null ? String.valueOf(summary.get("scanTime")) : String.valueOf(item.hashCode());
         }
         return String.valueOf(item.hashCode());
     }
@@ -200,5 +204,49 @@ public class HostAssetRecordService {
             query.eq(HostAssetRecord::getAssetType, assetType);
         }
         return hostAssetRecordMapper.selectList(query);
+    }
+
+    public void processRawEventData(String agentId, String type, Map<String, Object> eventData) {
+        if (!isEventAsset(type) && !"PROCESS".equals(type) && !"NETWORK".equals(type) && !"SOFTWARE".equals(type)) {
+            return; // Not an asset/snapshot type we track
+        }
+        
+        String reportType = (String) eventData.getOrDefault("reportType", "FULL");
+        List<Map<String, Object>> items = extractItemsFromEventData(type, eventData);
+        
+        if (items == null || items.isEmpty()) {
+            log.debug("processRawEventData: 未提取到有效 items, agentId={}, type={}, 跳过同步", agentId, type);
+            return;
+        }
+        
+        SyncAssetRequest request = new SyncAssetRequest();
+        request.setAgentId(agentId);
+        request.setAssetType(type);
+        request.setReportType(reportType);
+        request.setItems(items);
+        
+        this.syncAssets(request);
+    }
+    
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> extractItemsFromEventData(String eventType, Map<String, Object> data) {
+        String[] candidateKeys;
+        switch (eventType != null ? eventType : "") {
+            case "PROCESS": candidateKeys = new String[] { "processes", "items" }; break;
+            case "NETWORK": candidateKeys = new String[] { "ports", "items" }; break;
+            case "TRAFFIC": candidateKeys = new String[] { "connections", "items" }; break;
+            case "LOGIN": candidateKeys = new String[] { "logins", "items" }; break;
+            case "INTRUSION_REPORT": return List.of(data);
+            default: candidateKeys = new String[] { "items", "softwares", "usb_devices", "processes", "ports", "connections", "logins" }; break;
+        }
+
+        for (String key : candidateKeys) {
+            Object raw = data.get(key);
+            if (raw instanceof List) {
+                return (List<Map<String, Object>>) raw;
+            }
+        }
+        log.debug("未能从 eventType={} 的数据中提取 items, keys={}", eventType, data.keySet());
+        return null;
     }
 }

@@ -11,3 +11,7 @@ export function savePolicy(data: any) {
 export function getEffectivePolicy(agentId: string, groupId?: string) {
     return request.get(`/policies/effective/${agentId}`, { params: { groupId } })
 }
+
+export function issueCommand(data: any) {
+    return request.post('/policies/commands', data)
+}

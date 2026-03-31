@@ -11,10 +11,12 @@
 | :--- | :--- | :--- | :--- | :--- |
 | GET | `/api/v1/assets` | 分页查询资产列表 | page, size, keyword, osType... | `PageResponse<Asset>` (含 `riskScore`) |
 | GET | `/api/v1/assets/{agentId}/details` | **核心**：获取聚合画像 | agentId | `AssetDetailDTO` (含告警/画像/评分) |
+| GET | `/api/v1/assets/{agentId}/intrusion-reports` | 获取终端入侵排查历史报告 | agentId | `List<Map<String, Object>>` |
 | GET | `/api/v1/assets/topology` | 获取网络连接拓扑 | - | `GraphDTO` (Nodes/Edges) |
 | GET | `/api/v1/assets/timeline` | **时光机**：查询历史快照 | agentId, [timestamp] | `List<HostAssetRecord>` |
 | POST | `/api/v1/assets/{agentId}/user-info` | 绑定终端负责人信息 (Agent 侧) | `AssetUser` JSON | `ApiResponse<Void>` |
 | POST | `/api/v1/assets/internal/sync` | **内部接口**：威胁服务推送快照 | `SyncAssetRequest` | 处理 ADD/REMOVE/FULL 逻辑聚合 |
+| POST | `/api/v1/assets/internal/sync_raw` | **内部接口 (Phase 4)**：威胁服务原生透传未解析数据 | `{agentId, assetType, data}` | asset-service 自行提取 items 并 Upsert |
 
 ### 1.2 资产同步 DTO: `SyncAssetRequest`
 ```json

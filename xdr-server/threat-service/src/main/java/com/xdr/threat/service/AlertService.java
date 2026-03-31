@@ -34,6 +34,7 @@ public class AlertService {
     /**
      * S-THR-001: 接收Agent上报事件并存储
      */
+    @SuppressWarnings("unchecked")
     public Event receiveEvent(Map<String, Object> eventData) {
         Event event = new Event();
         event.setAgentId((String) eventData.get("agentId"));
@@ -61,17 +62,14 @@ public class AlertService {
         }
 
         if (nestedData != null) {
-            String reportType = (String) nestedData.getOrDefault("reportType", "FULL");
-            // Agent 各采集器返回的数据 key 不一致，需按 eventType 动态提取
-            List<Map<String, Object>> items = extractItemsFromEventData(event.getEventType(), nestedData);
-            if (items != null && !items.isEmpty()) {
-                syncAssetSnapshot(event.getAgentId(), event.getEventType(), reportType, items);
-            }
+            syncAssetSnapshotRaw(event.getAgentId(), event.getEventType(), nestedData);
         }
 
         // S-THR-002/003: 简单规则匹配 - 基线偏差事件直接生成告警
         if ("BASELINE_DIFF".equals(event.getEventType())) {
             generateBaselineAlert(event, eventData);
+        } else if ("INTRUSION_REPORT".equals(event.getEventType())) {
+            generateIntrusionAlert(event, nestedData);
         }
 
         return event;
@@ -148,66 +146,23 @@ public class AlertService {
     }
 
     /**
-     * 根据 eventType 从 Agent 上报数据中动态提取对应的列表字段
-     * Agent 各采集器的返回结构不同:
-     * PROCESS -> {"processes": [...], "count": N}
-     * NETWORK -> {"ports": [...]}
-     * TRAFFIC -> {"connections": [...]}
-     * SOFTWARE/USB/LOGIN -> {"items": [...]} 或其他
+     * 同步未解析数据的资产快照到 asset-service (让 asset-service 自行处理内部结构)
      */
-    @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> extractItemsFromEventData(String eventType, Map<String, Object> data) {
-        // 按优先级尝试从已知的 key 中提取列表
-        String[] candidateKeys;
-        switch (eventType != null ? eventType : "") {
-            case "PROCESS":
-                candidateKeys = new String[] { "processes", "items" };
-                break;
-            case "NETWORK":
-                candidateKeys = new String[] { "ports", "items" };
-                break;
-            case "TRAFFIC":
-                candidateKeys = new String[] { "connections", "items" };
-                break;
-            case "LOGIN":
-                candidateKeys = new String[] { "logins", "items" };
-                break;
-            default:
-                candidateKeys = new String[] { "items", "softwares", "usb_devices", "processes", "ports", "connections",
-                        "logins" };
-                break;
-        }
-
-        for (String key : candidateKeys) {
-            Object raw = data.get(key);
-            if (raw instanceof List) {
-                return (List<Map<String, Object>>) raw;
-            }
-        }
-
-        log.debug("未能从 eventType={} 的数据中提取 items, keys={}", eventType, data.keySet());
-        return null;
-    }
-
-    /**
-     * 同步资产快照到 asset-service
-     */
-    private void syncAssetSnapshot(String agentId, String type, String reportType, List<Map<String, Object>> items) {
+    private void syncAssetSnapshotRaw(String agentId, String type, Map<String, Object> nestedData) {
         if (!"PROCESS".equals(type) && !"NETWORK".equals(type) &&
                 !"SOFTWARE".equals(type) && !"USB".equals(type) && !"LOGIN".equals(type) &&
-                !"TRAFFIC".equals(type))
+                !"TRAFFIC".equals(type) && !"INTRUSION_REPORT".equals(type))
             return;
 
         try {
             Map<String, Object> request = new HashMap<>();
             request.put("agentId", agentId);
             request.put("assetType", type);
-            request.put("reportType", reportType);
-            request.put("items", items);
+            request.put("data", nestedData);
 
-            restTemplate.postForObject("http://localhost:8082/api/v1/assets/internal/sync", request, Object.class);
+            restTemplate.postForObject("http://localhost:8082/api/v1/assets/internal/sync_raw", request, Object.class);
         } catch (Exception e) {
-            log.error("Failed to sync asset snapshot to asset-service", e);
+            log.error("Failed to sync raw asset snapshot to asset-service", e);
         }
     }
 
@@ -226,6 +181,27 @@ public class AlertService {
         alert.setDescription("检测到" + totalDiff + "项基线偏差");
         alert.setRawEvent(event.getEventData());
         alert.setPriority(totalDiff > 10 ? 80 : 50);
+        alertMapper.insert(alert);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void generateIntrusionAlert(Event event, Map<String, Object> data) {
+        if (data == null) return;
+        Map<String, Object> summary = (Map<String, Object>) data.get("summary");
+        if (summary == null) return;
+
+        int foundAnomalies = ((Number) summary.getOrDefault("foundAnomalies", 0)).intValue();
+        if (foundAnomalies == 0) return;
+
+        Alert alert = new Alert();
+        alert.setAgentId(event.getAgentId());
+        alert.setLevel(foundAnomalies > 5 ? "CRITICAL" : "HIGH");
+        alert.setStatus("NEW");
+        alert.setThreatType("INTRUSION_TRACE");
+        alert.setTitle("终端入侵痕迹预警: 发现" + foundAnomalies + "项异常");
+        alert.setDescription("深度取证扫描发现可疑持久化、进程伪装或反弹Shell行为，请立即排查报告详情。");
+        alert.setRawEvent(event.getEventData());
+        alert.setPriority(foundAnomalies > 5 ? 100 : 85);
         alertMapper.insert(alert);
     }
 
@@ -264,6 +240,7 @@ public class AlertService {
         alertMapper.updateById(alert);
     }
 
+    @SuppressWarnings("unchecked")
     private String extractPidFromAlert(Alert alert) {
         // 模型简化处理：从 rawEvent JSON 中提取逻辑
         try {

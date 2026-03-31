@@ -86,4 +86,10 @@ public class AssetController {
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime endTime) {
         return ApiResponse.ok(assetService.getHistoryRecords(agentId, assetType, startTime, endTime));
     }
+
+    /** 获取终端入侵痕迹排查报告 */
+    @GetMapping("/{agentId}/intrusion-reports")
+    public ApiResponse<java.util.List<java.util.Map<String, Object>>> getIntrusionReports(@PathVariable String agentId) {
+        return ApiResponse.ok(assetService.getIntrusionReports(agentId));
+    }
 }

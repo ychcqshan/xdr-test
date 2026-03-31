@@ -20,6 +20,20 @@ public class HostAssetRecordController {
         return ApiResponse.ok();
     }
 
+    /** Internal API for threat-service to push raw un-extracted event data */
+    @PostMapping("/sync_raw")
+    public ApiResponse<Void> syncRawAssets(@RequestBody java.util.Map<String, Object> request) {
+        String agentId = (String) request.get("agentId");
+        String assetType = (String) request.get("assetType");
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> data = (java.util.Map<String, Object>) request.get("data");
+        
+        if (agentId != null && assetType != null && data != null) {
+            hostAssetRecordService.processRawEventData(agentId, assetType, data);
+        }
+        return ApiResponse.ok();
+    }
+
     /** S-ASSET-010: 获取指定时间点的资产快照 (Time-travel) */
     @GetMapping("/timeline")
     public ApiResponse<java.util.List<com.xdr.asset.model.HostAssetRecord>> getTimeline(

@@ -23,3 +23,7 @@ export function getAssetStats() {
 export function getAssetTimeline(agentId: string, timestamp?: string) {
     return request.get(`/assets/${agentId}/timeline`, { params: { timestamp } })
 }
+
+export function getIntrusionReports(agentId: string) {
+    return request.get(`/assets/${agentId}/intrusion-reports`)
+}
