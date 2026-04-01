@@ -1,7 +1,6 @@
 package com.xdr.asset.dto;
 
 import lombok.Data;
-import java.util.List;
 import java.util.Map;
 
 @Data

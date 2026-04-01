@@ -1,0 +1,7 @@
+﻿扫雷工具数据字典,,
+序号,采集项,注册表键KEY的名称
+1,启动项,"HKCU\Software\Microsoft\Windows\CurrenlVersion\Run HKLM\Software\Microsoft\Windows\CurrenlVersion\Run HKClASoftware\Microsoft\Windows\CurrentVersion\Policies\Explor er\Run HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\E xplorer\Run HKLM\SYSTEM\CurrenlControlSet\Control\Sess沁nManager\ 下的 PendingFileRenameOperaiions HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce HKLM\Soflware\Microsoft\Windows\CurrenlVersion\RunOnce
+HKLM\Software\WOW6432No<le\Microsoft\Windows\CurrentVersio n\Run (64位系统)
+HKLM\Software\WOW6432Node\Microsoft\Windows\CurrenlVersio n\RunOnce (64 位系统)"
+2,服务,HKLM\SYSTEM\CurrentControlSet\Services
+3,计划任务,HKLM\Software\Microsoft\SchedulingAgent\(Win XP) HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\(Win7) HKLM\SOFTWARE\MicrosoH\Windows NT\CurrenlVersion\Schedule\TaskCache\Tree\(Win 10) HKLM\SOFTWARE\Microsoft\Windows NT\CurrenlVersion\Schedule\TaskCache\Tasks (Win 10)

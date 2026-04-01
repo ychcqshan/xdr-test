@@ -24,3 +24,6 @@ logs/
 
 # Database Dumps
 all.sql
+
+# Temp
+.tmp/

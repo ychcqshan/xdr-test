@@ -6,7 +6,6 @@ import com.xdr.auth.dto.LoginRequest;
 import com.xdr.auth.dto.LoginResponse;
 import com.xdr.auth.mapper.UserInfoMapper;
 import com.xdr.auth.model.UserInfo;
-import com.xdr.common.exception.BusinessException;
 import com.xdr.common.exception.UnauthorizedException;
 import com.xdr.common.util.JwtUtil;
 import lombok.RequiredArgsConstructor;

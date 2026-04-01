@@ -1,0 +1,59 @@
+﻿扫雷工具数据字典,,,,
+序号,数据类别,采集项,字段名称,字段示例
+1,系统信息,主机名,machine,WIN-U1NDUN9Q0IL
+2,,主机唯一 标识,uuid,157abda2a91a2a21a76d73b 2865767d2a185403b5503 f5 5a504c9759352ca674
+3,,操作系统版本,osversion,10.0.20348.502
+4,,发行版本,edition,Windows 10 Education
+5,,系统架构,arch,x64
+6,,任务开始时间,starllime,1650423580
+7,,任务结束时间,endtime,1650441580
+8,,用户信息,users （数组）,"（{""username"": ""Administrator'1, ""role1': 1 }, {""username"": ""DefaultAccount'V'role"": 0 },{""username"": ""Guest"",""role"":OJ,{""username"": ""WDAGUtilityAccount"", ""role"":0}]"
+9,,网卡信息,adapters （数组）,"[{”name""： ""以太网适配器 Ethernet。”, ”ipv4”： ""192.168.120.1 l,,,'，ipv6"": ""ie80::edad:aa4a:587b:bf2b "",""MAC"": ""00-50-56-80-2F-88"",""isdhc p""： false},{""name"":""以太网 适配器Ethernet',省略}]"
+10,,补丁信息,patchinfb （数组）,"[""KB5009470"", ""KB5009608”， ""KB5009639”]"
+11,,系统安装时间,installtime,1584640780
+12,,安装软件列表,software （数组）,"[{""name"":       ""Microsoft Visual C++ 2015-2019 Redistributable （x86）-14.27.29016"", ""version”： ""14.27.29016.0"", ""vendor"": ""Microsoft Corporation"", ""path"":"""", ""insialldate"": 1637344780 },{ ""name"": ""Microsoft Edge"", ""version"": ""99.0.1150.3011. ""vendor"": ""Microsoft Corporation"", ""path"": ""C:\\Program         Files （x86）\\Microsoft\\Edge\\Ap plication"", ""insialldate"": 1646589580 }]"
+13,,终端网络状态,netslatus,1
+14,文件信息,文件路径,filepath,C:\U sers\Adminislrator\Down loads
+15,,文件名,filename,TCPPortForwarding.exe
+16,,文件MD5值,filemd5,823e141df5d3855e45f22cbd02ce2a95
+17,,文件模糊哈希SSDEEP,ssdeep,12288:rna9+5e7FSbe7Yh4A0 IGF4O2DnM2xk/O2L:rnak5w Ff¥h4TlGQJxkTL
+18,,文件敏感哈希imphash,imphash,88431Ob1928934402ea6fec 1 d bd3cf5e
+19,,文件敏感哈希llsh,tlsh,T1DEC41312EBD79436D0A 199B4EF26C12D0F337A252E79584B339C85BD5F76AE0 E502323
+20,,文件大小,filesize,555568
+21,进程信息,进程名称,processname,sihost.exe
+22,,PID,pid,4884
+23,,运行用户,processuser,WIN-U1NDUN9O0ILAdministrator
+24,,进程路径,processpath,C:Windowsisystem32\sihost.exe
+25,,进程描述,processdescription,Shell Infastructure Host
+26,,启动参数,processcmdline,sihost.exe
+27,,进程 MD5,processmd5,aeb6b1d4eae4377e44d916f60269a401
+28,,启动时间,processstarttime,1649249980
+29,,父进程名,parentname,svchost.exe
+30,,父进程 ID,ppid,1884
+31,,进程加载模块及模块MD5,processmodule（数组）,"[""module"":""C:\WindowsWSystem32\xxxx.dll""""md5"":""f268ecefc18706b3f2aa69ee7319b143""},{'module"":""C:WindowslSystem32\ntdll.dll"",""md5"":""1268ecefc18706b3f2aa69ee7319b141""},{""module"":""C:WWindowslSystem32\kernel32.dll"",""md5"":""aeb6bld4eae4377e44d916f60269a40a""}]"
+32,,采集时间戳,timestamp,1649095190
+33,网卡通信信息,本地地址及端口,srcipporl,0.0.0.0:3389
+34,,远程地址及端口,dstipport,0.0.0.0:0
+35,,协议,protocol,TCP
+36,,状态,status,LISTENING
+37,,进程名,processname,svchosl.exe
+38,,进程ID,pid,908
+39,,进程路径,processpath,
+40,,采集时间戳,timestamp,1649095190
+41,域名信息,查询域名,querydnsname,bugreport.huorong.cn
+42,,查询结果,querydnsresult,101.201.233.121
+43,,采集时间戳,timestamp,1649095190
+44,,域名,hostname,mail.inner.cn
+45,,解析值,hostresult,10.10.11.22
+46,Shell信息,来源,source,PowerShell (Microsoft-Windows-PowerShe ID
+47,,记录时 间,eventlime,1650423580
+48,,事件ID,eventid,4104
+49,,任务类别,type,执行远程命令
+50,,用户,user,WIN-USGRG6E2388\Adminisi rator
+51,,详细信息,details,"# Copyright ?2008, MicrosoftCorporation, All rights reserved.
+#Common utility functionsmport-LocalizedDataBindingVariable ocalizationString -FileName LocalizationData
+# Functionto get user troubleshooting
+history function Get-UserTSHistoryPath { return$fenv:localappdata}diagnostics} 
+# Function to get admin troubleshooting history functionGet-AdminTSHistoryPath return
+""$fenv:localappdata}lelevateddiagnostics"" } # Function to get userreport folder path functionGet-UserReportPath { return$fenv:localappdataAMicrosoft\WindowslWERlReportQueue""# Function to get system reportfolder path functionGet-MachineReportPath { return$env:AllUsersProfileAMicrosotWindowslWERlReportQueue""}"
+隐私说明,,不采集具体文件的内容，除指定的文件类型（exe\dll等）外，也不采集文件名等敏感信息。会通过数字签名等白名单排出不需要扫描的文件。,,
