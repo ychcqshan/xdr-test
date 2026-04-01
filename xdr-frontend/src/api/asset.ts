@@ -27,3 +27,7 @@ export function getAssetTimeline(agentId: string, timestamp?: string) {
 export function getIntrusionReports(agentId: string) {
     return request.get(`/assets/${agentId}/intrusion-reports`)
 }
+
+export function triggerForensics(agentId: string) {
+    return request.post(`/assets/${agentId}/trigger-forensics`)
+}

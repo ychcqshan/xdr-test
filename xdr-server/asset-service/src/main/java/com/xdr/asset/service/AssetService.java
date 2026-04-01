@@ -32,6 +32,9 @@ public class AssetService {
 
     private final com.xdr.asset.client.ThreatServiceClient threatServiceClient;
     private final com.xdr.asset.client.BaselineServiceClient baselineServiceClient;
+    private final org.springframework.web.client.RestTemplate restTemplate;
+
+    private static final String POLICY_SERVICE_URL = "http://localhost:8085";
 
     /**
      * S-ASSET-001: 资产自动注册/更新 (心跳时调用)
@@ -247,6 +250,7 @@ public class AssetService {
         detail.setUsbDevices(new ArrayList<>());
         detail.setLogins(new ArrayList<>());
         detail.setTraffic(new ArrayList<>());
+        detail.setDnsQueries(new ArrayList<>());
 
         // 1. 获取基础库存快照 (PROCESS, NETWORK, SOFTWARE)
         List<com.xdr.asset.model.HostAssetRecord> inventoryRecords = hostAssetRecordService.getCurrentSnapshot(agentId);
@@ -270,6 +274,7 @@ public class AssetService {
         populateEventAssets(agentId, "USB", detail.getUsbDevices(), startTime, endTime);
         populateEventAssets(agentId, "LOGIN", detail.getLogins(), startTime, endTime);
         populateEventAssets(agentId, "TRAFFIC", detail.getTraffic(), startTime, endTime);
+        populateEventAssets(agentId, "DNS", detail.getDnsQueries(), startTime, endTime);
         
         // 3. 风险聚合数据 (侧边栏动态化)
         try {
@@ -340,5 +345,19 @@ public class AssetService {
             } catch (Exception e) { /* ignore */ }
         }
         return reports;
+    }
+
+    /** 触发深度取证扫描指令 */
+    public void triggerForensics(String agentId) {
+        Map<String, Object> command = new java.util.HashMap<>();
+        command.put("agentId", agentId);
+        command.put("commandType", "INTRUSION_SCAN");
+        command.put("commandData", "{}");
+
+        try {
+            restTemplate.postForEntity(POLICY_SERVICE_URL + "/api/v1/policies/commands", command, Void.class);
+        } catch (Exception e) {
+            throw new BusinessException("下发深度取证指令失败");
+        }
     }
 }

@@ -23,6 +23,8 @@ from agent.core.incremental_manager import IncrementalManager
 from agent.detector.ransomware import RansomwareDetector
 from agent.detector.command_monitor import CommandMonitor
 from agent.detector.signature_matcher import SignatureMatcher
+from agent.detector.event_detector import EventDetector
+from agent.core.watchdog import AgentWatchdog
 
 logger: logging.Logger = None
 comm: CommManager = None
@@ -34,6 +36,7 @@ collectors = []
 detectors = []
 traffic_collector: TrafficCollector = None
 forensic_collector: ForensicCollector = None
+watchdog: AgentWatchdog = None
 
 def report_alert(alert):
     """告警上报回调"""
@@ -58,6 +61,7 @@ def report_alert(alert):
 def collect_and_report():
     """执行采集并上报"""
     for collector in collectors:
+        if watchdog: watchdog.heartbeat(f"Collector_{collector.name()}")
         try:
             name = collector.name()
             data = collector.collect()
@@ -119,8 +123,10 @@ def collect_and_report():
                     if login_type != "NONE":
                         comm.report_event(event_type='LOGIN', event_data={'items': login_diff, 'reportType': login_type}, priority='LOW')
             elif name == 'TRAFFIC':
-                if 'connections' in data:
+                if 'connections' in data and data['connections']:
                     comm.report_event(event_type='TRAFFIC', event_data={'items': data['connections'], 'reportType': 'FULL'}, priority='LOW')
+                if 'dns' in data and data['dns']:
+                    comm.report_event(event_type='DNS', event_data={'items': data['dns'], 'reportType': 'FULL'}, priority='LOW')
             else:
                 # 不支持增量的直接全量
                 comm.report_event(
@@ -133,6 +139,7 @@ def collect_and_report():
 
 def poll_and_execute_commands():
     """轮询并执行后端下发的处置指令"""
+    if watchdog: watchdog.heartbeat("CommandHandler")
     try:
         commands = comm.get_pending_commands()
         for cmd in commands:
@@ -215,141 +222,162 @@ def send_heartbeat():
     comm.heartbeat(data)
 
 def main():
-    global logger, comm, collectors, incremental, traffic_collector, matcher, forensic_collector
+    global logger, comm, collectors, incremental, traffic_collector, matcher, forensic_collector, watchdog
 
-    load_config()
-    logger = setup_logger()
-    logger.info("=" * 50)
-    logger.info("XDR Agent Phase 2 启动中...")
+    try:
+        load_config()
+        logger = setup_logger()
+        logger.info("=" * 50)
+        logger.info("XDR Agent Phase 2 启动中...")
 
-    # ====== 重注册逻辑 ======
-    cfg = get_config()
-    need_register = cfg['agent'].get('re_register', False) or not get_agent_id()
+        # 启动自保护看门狗
+        config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+        watchdog = AgentWatchdog(config_path)
+        watchdog.start()
 
-    if need_register:
-        logger.info("检测到重注册标志或缺少 AgentID，开始执行全新注册流程...")
+        # ====== 重注册逻辑 ======
+        cfg = get_config()
+        need_register = cfg['agent'].get('re_register', False) or not get_agent_id()
 
-        # 1. 清除旧缓存
-        import sqlite3
-        cache_db = os.path.join(os.path.dirname(__file__), 'cache.db')
-        if os.path.exists(cache_db):
+        if need_register:
+            logger.info("检测到重注册标志或缺少 AgentID，开始执行全新注册流程...")
+
+            # 1. 清除旧缓存
+            import sqlite3
+            cache_db = os.path.join(os.path.dirname(__file__), 'cache.db')
+            if os.path.exists(cache_db):
+                try:
+                    conn = sqlite3.connect(cache_db)
+                    conn.execute("DELETE FROM user_info WHERE 1=1")
+                    conn.execute("DELETE FROM event_cache WHERE 1=1")
+                    conn.commit()
+                    conn.close()
+                    logger.info("已清除本地缓存数据")
+                except Exception as e:
+                    logger.warning(f"清除缓存时出错(可忽略): {e}")
+
+            # 2. 生成新 AgentID 并向后端注册
+            import uuid
+            new_agent_id = f"AGENT-{uuid.uuid4().hex[:16].upper()}"
+            logger.info(f"生成新 AgentID: {new_agent_id}")
+
+            set_agent_id(new_agent_id)
+
+            # 向 auth-service 注册
+            import requests
             try:
-                conn = sqlite3.connect(cache_db)
-                conn.execute("DELETE FROM user_info WHERE 1=1")
-                conn.execute("DELETE FROM event_cache WHERE 1=1")
-                conn.commit()
-                conn.close()
-                logger.info("已清除本地缓存数据")
+                resp = requests.post(
+                    f"{cfg['agent']['server_url']}/api/v1/auth/agent/register",
+                    json={
+                        'agentId': new_agent_id,
+                        'hostname': platform.node(),
+                        'osType': platform.system().upper()
+                    },
+                    timeout=10
+                )
+                if resp.status_code == 200:
+                    logger.info(f"后端注册成功: {new_agent_id}")
+                else:
+                    logger.warning(f"后端注册返回异常: {resp.status_code}")
             except Exception as e:
-                logger.warning(f"清除缓存时出错(可忽略): {e}")
+                logger.warning(f"后端注册请求失败(将在心跳时自动补偿): {e}")
 
-        # 2. 生成新 AgentID 并向后端注册
-        import uuid
-        new_agent_id = f"AGENT-{uuid.uuid4().hex[:16].upper()}"
-        logger.info(f"生成新 AgentID: {new_agent_id}")
+            # 3. 回写 re_register = false
+            cfg['agent']['re_register'] = False
+            from agent.core.config import save_config
+            save_config()
+            logger.info("re_register 标志已自动回写为 false")
 
-        set_agent_id(new_agent_id)
+        # ====== 初始化通信 ======
+        comm = CommManager()
+        incremental = IncrementalManager()
 
-        # 向 auth-service 注册
-        import requests
+        # 4. 弹窗采集用户信息（新注册 或 本地无记录时触发）
+        if need_register:
+            logger.info("弹出用户信息采集窗口...")
+            try:
+                from agent.user_info.manager import UserInfoManager
+                user_mgr = UserInfoManager(comm)
+                user_mgr.check_and_collect()
+            except Exception as e:
+                logger.error(f"用户信息采集窗口弹出失败 (可能是无界面环境): {e}")
+        
+        # 规则引擎
+        rules_path = os.path.join(os.path.dirname(__file__), "agent/rules/attack_features.yaml")
+        matcher = SignatureMatcher(rules_path)
+
+        # 1. 启动实时检测模块 (线程驱动)
+        logger.info("启动实时检测模块...")
+        
+        # 指令监控
+        cmd_monitor = CommandMonitor(report_alert)
+        cmd_monitor.start()
+        
+        # 勒索监控
+        ransom_detector = RansomwareDetector(report_alert)
+        ransom_detector.start()
+        
+        # 4104 PowerShell 挂钩与注册表事件监控 (A 队列强化)
+        event_detector = EventDetector(report_alert)
+        event_detector.start()
+        
+        # 2. 启动流量监听 (混杂模式)
+        logger.info("开启网卡混杂模式流量监听...")
+        traffic_collector = TrafficCollector()
+        traffic_collector.start_sniffing()
+
+        # 3. 初始化周期采集器
+        proc_coll = ProcessCollector()
+        port_coll = PortCollector()
+        forensic_collector = ForensicCollector(proc_coll, port_coll)
+        
+        collectors = [
+            proc_coll,
+            HostCollector(),
+            port_coll,
+            ExtraCollector(),
+            traffic_collector
+        ]
+
+        # 4. 立即执行首次数据上报与心跳
+        logger.info("执行首次心跳与资产上报...")
         try:
-            resp = requests.post(
-                f"{cfg['agent']['server_url']}/api/v1/auth/agent/register",
-                json={
-                    'agentId': new_agent_id,
-                    'hostname': platform.node(),
-                    'osType': platform.system().upper()
-                },
-                timeout=10
-            )
-            if resp.status_code == 200:
-                logger.info(f"后端注册成功: {new_agent_id}")
-            else:
-                logger.warning(f"后端注册返回异常: {resp.status_code}")
+            send_heartbeat()
+            collect_and_report()
         except Exception as e:
-            logger.warning(f"后端注册请求失败(将在心跳时自动补偿): {e}")
+            logger.error(f"首次上报失败: {e}")
 
-        # 3. 回写 re_register = false
-        cfg['agent']['re_register'] = False
-        from agent.core.config import save_config
-        save_config()
-        logger.info("re_register 标志已自动回写为 false")
+        # 5. 启动定时任务
+        scheduler = BlockingScheduler()
+        scheduler.add_job(collect_and_report, 'interval', seconds=60, id='collect')
+        scheduler.add_job(send_heartbeat, 'interval', seconds=300, id='heartbeat')
+        scheduler.add_job(poll_and_execute_commands, 'interval', seconds=10, id='commands')
+        
+        # 深度取证定期执行 (每 1 小时)
+        def periodic_forensic():
+            if forensic_collector:
+                res = forensic_collector.collect()
+                comm.report_event(event_type="INTRUSION_REPORT", event_data=res, priority="LOW")
+                
+        scheduler.add_job(periodic_forensic, 'interval', seconds=3600, id='forensic_periodic')
 
-    # ====== 初始化通信 ======
-    comm = CommManager()
-    incremental = IncrementalManager()
-
-    # 4. 弹窗采集用户信息（新注册 或 本地无记录时触发）
-    if need_register:
-        logger.info("弹出用户信息采集窗口...")
-        from agent.user_info.manager import UserInfoManager
-        user_mgr = UserInfoManager(comm)
-        user_mgr.check_and_collect()
-    
-    # 规则引擎
-    rules_path = os.path.join(os.path.dirname(__file__), "agent/rules/attack_features.yaml")
-    matcher = SignatureMatcher(rules_path)
-
-    # 1. 启动实时检测模块 (线程驱动)
-    logger.info("启动实时检测模块...")
-    
-    # 指令监控
-    cmd_monitor = CommandMonitor(report_alert)
-    cmd_monitor.start()
-    
-    # 勒索监控
-    ransom_detector = RansomwareDetector(report_alert)
-    ransom_detector.start()
-    
-    # 2. 启动流量监听 (混杂模式)
-    logger.info("开启网卡混杂模式流量监听...")
-    traffic_collector = TrafficCollector()
-    traffic_collector.start_sniffing()
-
-    # 3. 初始化周期采集器
-    proc_coll = ProcessCollector()
-    port_coll = PortCollector()
-    forensic_collector = ForensicCollector(proc_coll, port_coll)
-    
-    collectors = [
-        proc_coll,
-        HostCollector(),
-        port_coll,
-        ExtraCollector(),
-        traffic_collector
-    ]
-
-    # 4. 立即执行首次数据上报与心跳
-    logger.info("执行首次心跳与资产上报...")
-    try:
-        send_heartbeat()
-        collect_and_report()
-    except Exception as e:
-        logger.error(f"首次上报失败: {e}")
-
-    # 5. 启动定时任务
-    scheduler = BlockingScheduler()
-    scheduler.add_job(collect_and_report, 'interval', seconds=60, id='collect')
-    scheduler.add_job(send_heartbeat, 'interval', seconds=300, id='heartbeat')
-    scheduler.add_job(poll_and_execute_commands, 'interval', seconds=10, id='commands')
-    
-    # 深度取证定期执行 (每 1 小时)
-    def periodic_forensic():
-        if forensic_collector:
-            res = forensic_collector.collect()
-            comm.report_event(event_type="INTRUSION_REPORT", event_data=res, priority="LOW")
-            
-    scheduler.add_job(periodic_forensic, 'interval', seconds=3600, id='forensic_periodic')
-
-    logger.info("XDR Agent Phase 2 运行中...")
-
-    try:
+        logger.info("XDR Agent Phase 2 运行中...")
         scheduler.start()
+
     except (KeyboardInterrupt, SystemExit):
         logger.info("正在停止 Agent...")
-        cmd_monitor.stop()
-        ransom_detector.stop()
-        traffic_collector.stop()
+        if watchdog: watchdog.stop()
+        if 'cmd_monitor' in locals(): cmd_monitor.stop()
+        if 'ransom_detector' in locals(): ransom_detector.stop()
+        if 'event_detector' in locals(): event_detector.stop()
+        if traffic_collector: traffic_collector.stop()
+    except Exception as e:
+        import traceback
+        error_info = traceback.format_exc()
+        logger.critical(f"FATAL: Agent 崩溃退出! 详情:\n{error_info}")
+        if watchdog: watchdog.stop()
+        # 在退出前尝试上报一次严重的系统错误（可选）
+        os._exit(1)
 
 if __name__ == '__main__':
     main()

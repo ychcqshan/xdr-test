@@ -1,4 +1,4 @@
-from scapy.all import sniff, IP
+from scapy.all import sniff, IP, UDP, DNS, DNSQR
 import threading
 from datetime import datetime
 from .base import BaseCollector
@@ -12,6 +12,7 @@ class TrafficCollector(BaseCollector):
 
     def __init__(self):
         self.connections = {}  # {(src, dst, dport): count}
+        self.dns_queries = []  # []
         self.lock = threading.Lock()
         self._stop_event = threading.Event()
         self._sniffer_thread = None
@@ -23,6 +24,18 @@ class TrafficCollector(BaseCollector):
             proto = pkt[IP].proto
             sport = pkt.sport if hasattr(pkt, 'sport') else 0
             dport = pkt.dport if hasattr(pkt, 'dport') else 0
+            
+            # DNS 检测
+            if pkt.haslayer(DNSQR) and pkt.haslayer(UDP) and dport == 53:
+                qname = pkt[DNSQR].qname
+                qname_str = qname.decode('utf-8', errors='ignore') if isinstance(qname, bytes) else str(qname)
+                if qname_str.endswith('.'): qname_str = qname_str[:-1]
+                with self.lock:
+                    if len(self.dns_queries) < 100:
+                        self.dns_queries.append({
+                            "querydnsname": qname_str,
+                            "timestamp": datetime.now().isoformat()
+                        })
             
             key = (src, sport, dst, dport, proto)
             with self.lock:
@@ -53,8 +66,12 @@ class TrafficCollector(BaseCollector):
             # 重置计数，保证每次上报增量或近期活跃连接
             self.connections.clear()
             
+            dns_snapshot = self.dns_queries[:]
+            self.dns_queries.clear()
+            
         return {
             "connections": snapshot,
+            "dns": dns_snapshot,
             "timestamp": now_ts
         }
 

@@ -27,3 +27,4 @@ all.sql
 
 # Temp
 .tmp/
+.agent/skills

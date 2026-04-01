@@ -18,6 +18,7 @@ public class AssetDetailDTO {
     private List<Map<String, Object>> usbDevices;
     private List<Map<String, Object>> logins;
     private List<Map<String, Object>> traffic;
+    private List<Map<String, Object>> dnsQueries;
 
     // 风险审计详情
     private Integer baselineDeviations;

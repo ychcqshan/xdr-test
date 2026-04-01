@@ -24,7 +24,7 @@ public class HostAssetRecordService {
     private final ObjectMapper objectMapper;
 
     private boolean isEventAsset(String type) {
-        return "USB".equals(type) || "LOGIN".equals(type) || "TRAFFIC".equals(type) || "INTRUSION_REPORT".equals(type);
+        return "USB".equals(type) || "LOGIN".equals(type) || "TRAFFIC".equals(type) || "INTRUSION_REPORT".equals(type) || "DNS".equals(type);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -145,6 +145,10 @@ public class HostAssetRecordService {
                     + item.get("protocol");
             String ts = String.valueOf(item.getOrDefault("timestamp", ""));
             return ts.isEmpty() ? base : base + "|" + ts;
+        } else if ("DNS".equals(type)) {
+            String base = String.valueOf(item.getOrDefault("querydnsname", ""));
+            String ts = String.valueOf(item.getOrDefault("timestamp", ""));
+            return ts.isEmpty() ? base : base + "|" + ts;
         } else if ("INTRUSION_REPORT".equals(type)) {
             @SuppressWarnings("unchecked")
             Map<String, Object> summary = (Map<String, Object>) item.get("summary");
@@ -235,6 +239,7 @@ public class HostAssetRecordService {
             case "PROCESS": candidateKeys = new String[] { "processes", "items" }; break;
             case "NETWORK": candidateKeys = new String[] { "ports", "items" }; break;
             case "TRAFFIC": candidateKeys = new String[] { "connections", "items" }; break;
+            case "DNS": candidateKeys = new String[] { "dns", "items" }; break;
             case "LOGIN": candidateKeys = new String[] { "logins", "items" }; break;
             case "INTRUSION_REPORT": return List.of(data);
             default: candidateKeys = new String[] { "items", "softwares", "usb_devices", "processes", "ports", "connections", "logins" }; break;

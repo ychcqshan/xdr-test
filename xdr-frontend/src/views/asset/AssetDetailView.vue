@@ -342,6 +342,53 @@
               </div>
             </el-tab-pane>
 
+            <el-tab-pane label="DNS 解析审计" name="dns">
+              <div class="table-container-elite">
+                <div class="tab-header-actions mb-4 flex justify-between items-center">
+                  <span class="text-muted-sm">终端外联域名追踪 (支持时间漫游)</span>
+                  <el-date-picker
+                    v-model="auditTimeRange"
+                    type="datetimerange"
+                    start-placeholder="起始时间"
+                    end-placeholder="结束时间"
+                    size="small"
+                    class="elite-date-range-picker"
+                    @change="fetchData"
+                    :disabled="isTimeMachineActive"
+                  />
+                </div>
+                <div class="dns-timeline-container" style="max-height: 500px; overflow-y: auto; padding-top: 10px; padding-left: 5px;">
+                  <el-timeline v-if="paginatedDns.length > 0">
+                    <el-timeline-item
+                      v-for="(row, idx) in paginatedDns"
+                      :key="idx"
+                      :timestamp="row.timestamp ? formatDateTime(row.timestamp) : '-'"
+                      placement="top"
+                      :type="idx === 0 ? 'primary' : 'info'"
+                      :hollow="idx !== 0"
+                    >
+                      <el-card shadow="hover" class="dns-timeline-card border-none bg-gray-50/50">
+                        <div class="dns-query-item flex items-center">
+                          <el-icon class="mr-2 text-primary"><Connection /></el-icon>
+                          <span class="text-primary-bold text-sm font-mono tracking-wider">{{ row.querydnsname }}</span>
+                        </div>
+                      </el-card>
+                    </el-timeline-item>
+                  </el-timeline>
+                  <el-empty v-else description="暂无 DNS 请求记录" :image-size="80" />
+                </div>
+                <div class="pagination-sub">
+                  <el-pagination
+                    v-model:current-page="dnsPage"
+                    v-model:page-size="pageSize"
+                    :total="details?.dnsQueries?.length || 0"
+                    layout="total, prev, pager, next"
+                    class="elite-pagination sm"
+                  />
+                </div>
+              </div>
+            </el-tab-pane>
+
             <el-tab-pane label="入侵排查" name="intrusion">
               <IntrusionReport :agent-id="agentId" />
             </el-tab-pane>
@@ -392,7 +439,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getAssetDetail, getAssetDetails, getAssetTimeline } from '@/api/asset'
 import { ElMessage } from 'element-plus'
@@ -424,7 +471,14 @@ const softwarePage = ref(1)
 const usbPage = ref(1)
 const loginPage = ref(1)
 const trafficPage = ref(1)
+const dnsPage = ref(1)
 const auditTimeRange = ref<any>([])
+
+const paginatedDns = computed(() => {
+  if (!details.value?.dnsQueries) return []
+  const start = (dnsPage.value - 1) * pageSize.value
+  return details.value.dnsQueries.slice(start, start + pageSize.value)
+})
 
 const paginatedProcesses = computed(() => {
   if (!details.value?.processes) return []
@@ -464,6 +518,31 @@ const paginatedTraffic = computed(() => {
 
 onMounted(() => fetchData())
 
+let dnsRefreshTimer: any = null
+
+watch(activeTab, (newTab) => {
+  if (newTab === 'dns' && !isTimeMachineActive.value) {
+    if (!dnsRefreshTimer) {
+      dnsRefreshTimer = setInterval(() => {
+        if (!isTimeMachineActive.value) {
+          // 只静默刷新 DNS 数据流，避免整页跳跃
+          getAssetDetails(agentId, '', '').then(res => {
+            details.value = res.data
+          }).catch(() => {})
+        }
+      }, 3000)
+    }
+  } else {
+    if (dnsRefreshTimer) {
+      clearInterval(dnsRefreshTimer)
+      dnsRefreshTimer = null
+    }
+  }
+})
+
+onUnmounted(() => {
+  if (dnsRefreshTimer) clearInterval(dnsRefreshTimer)
+})
 async function fetchData() {
   try {
     loading.value = true
@@ -514,7 +593,8 @@ async function fetchHistoryData() {
       softwares: [],
       usbDevices: [],
       logins: [],
-      traffic: []
+      traffic: [],
+      dnsQueries: []
     } as any
 
     historyRecords.forEach((record: any) => {
@@ -530,6 +610,7 @@ async function fetchHistoryData() {
           case 'USB': newDetails.usbDevices.push(itemData); break
           case 'LOGIN': newDetails.logins.push(itemData); break
           case 'TRAFFIC': newDetails.traffic.push(itemData); break
+          case 'DNS': newDetails.dnsQueries.push(itemData); break
         }
       } catch (e) { /* skip */ }
     })
@@ -541,6 +622,7 @@ async function fetchHistoryData() {
     usbPage.value = 1
     loginPage.value = 1
     trafficPage.value = 1
+    dnsPage.value = 1
   } catch (e) {
     console.error('Failed to fetch history', e)
     ElMessage.error('获取历史快照失败')

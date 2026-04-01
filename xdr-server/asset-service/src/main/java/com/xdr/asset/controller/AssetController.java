@@ -92,4 +92,11 @@ public class AssetController {
     public ApiResponse<java.util.List<java.util.Map<String, Object>>> getIntrusionReports(@PathVariable String agentId) {
         return ApiResponse.ok(assetService.getIntrusionReports(agentId));
     }
+
+    /** 触发深度取证扫描 */
+    @PostMapping("/{agentId}/trigger-forensics")
+    public ApiResponse<Void> triggerForensics(@PathVariable String agentId) {
+        assetService.triggerForensics(agentId);
+        return ApiResponse.ok();
+    }
 }

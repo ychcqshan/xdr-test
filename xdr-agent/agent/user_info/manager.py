@@ -55,9 +55,19 @@ class UserInfoManager:
         conn.close()
 
         if not row:
-            logger.info("未发现用户信息，启动采集GUI...")
-            gui = UserInfoCollectorGUI(self.save_and_report)
-            gui.run()
+            logger.info("未发现用户信息，尝试启动采集 GUI...")
+            try:
+                import tkinter
+                # 检查是否能初始化，防止无 DISPLAY 或 XP 等老旧环境崩溃
+                root = tkinter.Tk()
+                root.withdraw()
+                root.destroy()
+                
+                gui = UserInfoCollectorGUI(self.save_and_report)
+                gui.run()
+            except Exception as e:
+                logger.warning(f"GUI 环境不可用 (可能是无界面环境或缺少依赖): {e}")
+                # 无界面环境下可在此处扩展到命令行采集或其他静默模式
         else:
             logger.debug("已存在用户信息")
 
