@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  # 基础设施：MySQL
+  xdr-mysql:
+    image: mysql:8.0
+    container_name: xdr-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: xdr_auth
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./init-sql:/docker-entrypoint-initdb.d
+      - ./data/mysql:/var/lib/mysql
+
+  # 基础设施：Redis
+  xdr-redis:
+    image: redis:7.0-alpine
+    container_name: xdr-redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  # API 网关 (8000)
+  api-gateway:
+    build: .
+    container_name: api-gateway
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../xdr-server/api-gateway/target/api-gateway-1.0.0-SNAPSHOT.jar:/app/app.jar
+    depends_on:
+      - auth-service
+      - asset-service
+
+  # 认证服务 (8001)
+  auth-service:
+    build: .
+    container_name: auth-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_auth?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      - SPRING_DATA_REDIS_HOST=xdr-redis
+    volumes:
+      - ../../xdr-server/auth-service/target/auth-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    depends_on:
+      - xdr-mysql
+      - xdr-redis
+
+  # 资产服务 (8002)
+  asset-service:
+    build: .
+    container_name: asset-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_asset?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ../../xdr-server/asset-service/target/asset-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    depends_on:
+      - xdr-mysql
+
+  # 基线服务 (8003)
+  baseline-service:
+    build: .
+    container_name: baseline-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_baseline?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ../../xdr-server/baseline-service/target/baseline-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    depends_on:
+      - xdr-mysql
+
+  # 威胁服务 (8004)
+  threat-service:
+    build: .
+    container_name: threat-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_threat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ../../xdr-server/threat-service/target/threat-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    depends_on:
+      - xdr-mysql
+
+  # 策略服务 (8005)
+  policy-service:
+    build: .
+    container_name: policy-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_policy?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ../../xdr-server/policy-service/target/policy-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    depends_on:
+      - xdr-mysql
+
+  # 升级服务 (8006)
+  upgrade-service:
+    build: .
+    container_name: upgrade-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_upgrade?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ../../xdr-server/upgrade-service/target/upgrade-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    depends_on:
+      - xdr-mysql
+
+  # 合规服务 (8007)
+  compliance-service:
+    build: .
+    container_name: compliance-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_compliance?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ../../xdr-server/compliance-service/target/compliance-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    depends_on:
+      - xdr-mysql
+
+networks:
+  default:
+    name: xdr-network

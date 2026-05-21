@@ -1,0 +1,144 @@
+version: '3.8'
+
+services:
+  # 基础设施：MySQL
+  xdr-mysql:
+    image: mysql:8.0
+    container_name: xdr-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: xdr_auth
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./init-sql:/docker-entrypoint-initdb.d
+      - ./data/mysql:/var/lib/mysql
+
+  # 基础设施：Redis
+  xdr-redis:
+    image: redis:7.0-alpine
+    container_name: xdr-redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  # API 网关 (8000)
+  api-gateway:
+    image: eclipse-temurin:17-jre-alpine
+    container_name: api-gateway
+    restart: always
+    ports:
+      - "8000:8080"
+    volumes:
+      - ./api-gateway-1.0.0-SNAPSHOT.jar:/app/app.jar
+    command: ["java", "-Xmx256m", "-Xms256m", "-jar", "/app/app.jar"]
+    environment:
+      # 动态覆盖路由表，防止容器级 503 错误，抛弃写死 IP 的配置
+      - SPRING_CLOUD_GATEWAY_ROUTES_0_URI=http://auth-service:8081
+      - SPRING_CLOUD_GATEWAY_ROUTES_1_URI=http://asset-service:8082
+      - SPRING_CLOUD_GATEWAY_ROUTES_2_URI=http://baseline-service:8083
+      - SPRING_CLOUD_GATEWAY_ROUTES_3_URI=http://threat-service:8084
+      - SPRING_CLOUD_GATEWAY_ROUTES_4_URI=http://policy-service:8085
+      - SPRING_CLOUD_GATEWAY_ROUTES_5_URI=http://upgrade-service:8086
+      - SPRING_CLOUD_GATEWAY_ROUTES_6_URI=http://compliance-service:8087
+    depends_on:
+      - auth-service
+      - asset-service
+
+  # 认证服务 (8001)
+  auth-service:
+    image: eclipse-temurin:17-jre-alpine
+    container_name: auth-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_auth?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+      - SPRING_DATA_REDIS_HOST=xdr-redis
+    volumes:
+      - ./auth-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    command: ["java", "-Xmx256m", "-Xms256m", "-jar", "/app/app.jar"]
+    depends_on:
+      - xdr-mysql
+      - xdr-redis
+
+  # 资产服务 (8002)
+  asset-service:
+    image: eclipse-temurin:17-jre-alpine
+    container_name: asset-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_asset?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ./asset-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    command: ["java", "-Xmx256m", "-Xms256m", "-jar", "/app/app.jar"]
+    depends_on:
+      - xdr-mysql
+
+  # 基线服务 (8003)
+  baseline-service:
+    image: eclipse-temurin:17-jre-alpine
+    container_name: baseline-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_baseline?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ./baseline-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    command: ["java", "-Xmx256m", "-Xms256m", "-jar", "/app/app.jar"]
+    depends_on:
+      - xdr-mysql
+
+  # 威胁服务 (8004)
+  threat-service:
+    image: eclipse-temurin:17-jre-alpine
+    container_name: threat-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_threat?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ./threat-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    command: ["java", "-Xmx256m", "-Xms256m", "-jar", "/app/app.jar"]
+    depends_on:
+      - xdr-mysql
+
+  # 策略服务 (8005)
+  policy-service:
+    image: eclipse-temurin:17-jre-alpine
+    container_name: policy-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_policy?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ./policy-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    command: ["java", "-Xmx256m", "-Xms256m", "-jar", "/app/app.jar"]
+    depends_on:
+      - xdr-mysql
+
+  # 升级服务 (8006)
+  upgrade-service:
+    image: eclipse-temurin:17-jre-alpine
+    container_name: upgrade-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_upgrade?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ./upgrade-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    command: ["java", "-Xmx256m", "-Xms256m", "-jar", "/app/app.jar"]
+    depends_on:
+      - xdr-mysql
+
+  # 合规服务 (8007)
+  compliance-service:
+    image: eclipse-temurin:17-jre-alpine
+    container_name: compliance-service
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://xdr-mysql:3306/xdr_compliance?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    volumes:
+      - ./compliance-service-1.0.0-SNAPSHOT.jar:/app/app.jar
+    command: ["java", "-Xmx256m", "-Xms256m", "-jar", "/app/app.jar"]
+    depends_on:
+      - xdr-mysql
+
+networks:
+  default:
+    name: xdr-network

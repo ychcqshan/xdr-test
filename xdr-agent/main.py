@@ -25,6 +25,7 @@ from agent.detector.command_monitor import CommandMonitor
 from agent.detector.signature_matcher import SignatureMatcher
 from agent.detector.event_detector import EventDetector
 from agent.core.watchdog import AgentWatchdog
+import json
 
 logger: logging.Logger = None
 comm: CommManager = None
@@ -225,13 +226,23 @@ def main():
     global logger, comm, collectors, incremental, traffic_collector, matcher, forensic_collector, watchdog
 
     try:
-        load_config()
+        from agent.core.config import get_base_path
+        base_dir = get_base_path()
+
+        try:
+            load_config()
+        except Exception as e:
+            # 此时 logger 可能还没初始化，直接打到 stderr
+            import sys
+            print(f"[-] 核心配置加载失败，请确保 config.yaml 存在于程序同级目录: {e}", file=sys.stderr)
+            sys.exit(1)
+
         logger = setup_logger()
         logger.info("=" * 50)
         logger.info("XDR Agent Phase 2 启动中...")
 
         # 启动自保护看门狗
-        config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+        config_path = os.path.join(base_dir, "config.yaml")
         watchdog = AgentWatchdog(config_path)
         watchdog.start()
 
@@ -302,9 +313,14 @@ def main():
             except Exception as e:
                 logger.error(f"用户信息采集窗口弹出失败 (可能是无界面环境): {e}")
         
-        # 规则引擎
-        rules_path = os.path.join(os.path.dirname(__file__), "agent/rules/attack_features.yaml")
-        matcher = SignatureMatcher(rules_path)
+        # 规则引擎 (可选加载)
+        rules_path = os.path.join(base_dir, "agent/rules/attack_features.yaml")
+        if os.path.exists(rules_path):
+            matcher = SignatureMatcher(rules_path)
+        else:
+            logger.warning(f"检测到规则文件缺失: {rules_path}, 特征匹配引擎将跳过。")
+            # 初始化一个空的匹配器或 Mock 逻辑
+            matcher = SignatureMatcher(None) 
 
         # 1. 启动实时检测模块 (线程驱动)
         logger.info("启动实时检测模块...")
@@ -373,10 +389,14 @@ def main():
         if traffic_collector: traffic_collector.stop()
     except Exception as e:
         import traceback
+        import sys
         error_info = traceback.format_exc()
-        logger.critical(f"FATAL: Agent 崩溃退出! 详情:\n{error_info}")
+        if logger:
+            logger.critical(f"FATAL: Agent 崩溃退出! 详情:\n{error_info}")
+        else:
+            print(f"FATAL: Agent 崩溃退出! 详情:\n{error_info}", file=sys.stderr)
+        
         if watchdog: watchdog.stop()
-        # 在退出前尝试上报一次严重的系统错误（可选）
         os._exit(1)
 
 if __name__ == '__main__':

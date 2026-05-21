@@ -28,3 +28,6 @@ all.sql
 # Temp
 .tmp/
 .agent/skills
+*.exe
+
+xdr-agent/build/
