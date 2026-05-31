@@ -5,7 +5,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-from agent.core.config import get_config
+from agent.core.config import get_config, get_base_path
 
 
 def setup_logger(name: str = 'xdr-agent') -> logging.Logger:
@@ -27,6 +27,8 @@ def setup_logger(name: str = 'xdr-agent') -> logging.Logger:
 
     # 文件
     log_file = log_cfg.get('file', 'logs/agent.log')
+    if not os.path.isabs(log_file):
+        log_file = os.path.join(get_base_path(), log_file)
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
     file_handler = RotatingFileHandler(
         log_file,

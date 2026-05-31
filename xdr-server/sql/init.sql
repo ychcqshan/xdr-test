@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS baseline_item (
     item_data JSON NOT NULL COMMENT '基线项完整数据',
     deleted INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_baseline_id (baseline_id)
 );
 
@@ -174,7 +175,9 @@ CREATE TABLE IF NOT EXISTS event (
     event_data JSON NOT NULL,
     priority VARCHAR(20) DEFAULT 'LOW' COMMENT 'CRITICAL/HIGH/LOW',
     processed INT DEFAULT 0 COMMENT '0-未处理 1-已处理',
+    deleted INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_agent_id (agent_id),
     INDEX idx_event_type (event_type),
     INDEX idx_created_at (created_at)

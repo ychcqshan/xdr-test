@@ -29,7 +29,11 @@ public class AlertService {
     private final ObjectMapper objectMapper;
     private final org.springframework.web.client.RestTemplate restTemplate;
 
-    private static final String POLICY_SERVICE_URL = "http://localhost:8085";
+    @org.springframework.beans.factory.annotation.Value("${xdr.services.policy-url:http://localhost:8085}")
+    private String policyServiceUrl;
+
+    @org.springframework.beans.factory.annotation.Value("${xdr.services.asset-url:http://localhost:8082}")
+    private String assetServiceUrl;
 
     /**
      * S-THR-001: 接收Agent上报事件并存储
@@ -151,7 +155,7 @@ public class AlertService {
     private void syncAssetSnapshotRaw(String agentId, String type, Map<String, Object> nestedData) {
         if (!"PROCESS".equals(type) && !"NETWORK".equals(type) &&
                 !"SOFTWARE".equals(type) && !"USB".equals(type) && !"LOGIN".equals(type) &&
-                !"TRAFFIC".equals(type) && !"INTRUSION_REPORT".equals(type))
+                !"TRAFFIC".equals(type) && !"INTRUSION_REPORT".equals(type) && !"DNS".equals(type))
             return;
 
         try {
@@ -160,7 +164,7 @@ public class AlertService {
             request.put("assetType", type);
             request.put("data", nestedData);
 
-            restTemplate.postForObject("http://localhost:8082/api/v1/assets/internal/sync_raw", request, Object.class);
+            restTemplate.postForObject(assetServiceUrl + "/api/v1/assets/internal/sync_raw", request, Object.class);
         } catch (Exception e) {
             log.error("Failed to sync raw asset snapshot to asset-service", e);
         }
@@ -228,7 +232,7 @@ public class AlertService {
             }
             command.put("commandData", objectMapper.writeValueAsString(commandData));
 
-            restTemplate.postForEntity(POLICY_SERVICE_URL + "/api/v1/policies/commands", command, Void.class);
+            restTemplate.postForEntity(policyServiceUrl + "/api/v1/policies/commands", command, Void.class);
 
             alert.setResponseStatus("SENT");
         } catch (Exception e) {

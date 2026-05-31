@@ -2,11 +2,28 @@
 XDR Agent 主入口 - Phase 2 (Advanced Detection & Enriched Collection)
 """
 import os
+import sys
 import platform
 import logging
 import threading
 import psutil
 import socket
+import subprocess
+
+# ---------------------------------------------------------
+# 全局静默配置：防止打包后调用系统命令（如 ipconfig）弹出 CMD 黑框
+# ---------------------------------------------------------
+_original_popen_init = subprocess.Popen.__init__
+
+def _patched_popen_init(self, *args, **kwargs):
+    if platform.system() == 'Windows':
+        if 'creationflags' not in kwargs:
+            kwargs['creationflags'] = 0x08000000  # CREATE_NO_WINDOW
+    _original_popen_init(self, *args, **kwargs)
+
+subprocess.Popen.__init__ = _patched_popen_init
+# ---------------------------------------------------------
+
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from agent.core.config import load_config, get_config, get_agent_id, set_agent_id
@@ -233,7 +250,6 @@ def main():
             load_config()
         except Exception as e:
             # 此时 logger 可能还没初始化，直接打到 stderr
-            import sys
             print(f"[-] 核心配置加载失败，请确保 config.yaml 存在于程序同级目录: {e}", file=sys.stderr)
             sys.exit(1)
 
@@ -255,7 +271,8 @@ def main():
 
             # 1. 清除旧缓存
             import sqlite3
-            cache_db = os.path.join(os.path.dirname(__file__), 'cache.db')
+            import shutil
+            cache_db = os.path.join(base_dir, 'cache.db')
             if os.path.exists(cache_db):
                 try:
                     conn = sqlite3.connect(cache_db)
@@ -266,6 +283,14 @@ def main():
                     logger.info("已清除本地缓存数据")
                 except Exception as e:
                     logger.warning(f"清除缓存时出错(可忽略): {e}")
+            
+            incremental_state_file = os.path.join(base_dir, 'cache', 'incremental_state.json')
+            if os.path.exists(incremental_state_file):
+                try:
+                    os.remove(incremental_state_file)
+                    logger.info("已清除增量状态缓存")
+                except Exception as e:
+                    pass
 
             # 2. 生成新 AgentID 并向后端注册
             import uuid
@@ -297,6 +322,7 @@ def main():
             cfg['agent']['re_register'] = False
             from agent.core.config import save_config
             save_config()
+            if watchdog: watchdog.update_baseline()
             logger.info("re_register 标志已自动回写为 false")
 
         # ====== 初始化通信 ======
@@ -315,6 +341,9 @@ def main():
         
         # 规则引擎 (可选加载)
         rules_path = os.path.join(base_dir, "agent/rules/attack_features.yaml")
+        if getattr(sys, 'frozen', False):
+            rules_path = os.path.join(sys._MEIPASS, "agent/rules/attack_features.yaml")
+        
         if os.path.exists(rules_path):
             matcher = SignatureMatcher(rules_path)
         else:
@@ -389,7 +418,6 @@ def main():
         if traffic_collector: traffic_collector.stop()
     except Exception as e:
         import traceback
-        import sys
         error_info = traceback.format_exc()
         if logger:
             logger.critical(f"FATAL: Agent 崩溃退出! 详情:\n{error_info}")

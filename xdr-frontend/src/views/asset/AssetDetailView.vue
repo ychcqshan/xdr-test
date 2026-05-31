@@ -108,7 +108,9 @@
                       <el-descriptions :column="1" class="elite-desc">
                         <el-descriptions-item label="负责人">{{ details?.assetUser?.username || details?.assetUser?.realName || '公共设备' }}</el-descriptions-item>
                         <el-descriptions-item label="所属单位">{{ details?.assetUser?.unitLevel1 || '未分配' }}</el-descriptions-item>
-                        <el-descriptions-item label="二级单位">{{ details?.assetUser?.unitLevel2 || '-' }}</el-descriptions-item>
+                        <el-descriptions-item label="二级单位" v-if="details?.assetUser?.unitLevel2">{{ details?.assetUser?.unitLevel2 }}</el-descriptions-item>
+                        <el-descriptions-item label="三级单位" v-if="details?.assetUser?.unitLevel3">{{ details?.assetUser?.unitLevel3 }}</el-descriptions-item>
+                        <el-descriptions-item label="四级单位" v-if="details?.assetUser?.unitLevel4">{{ details?.assetUser?.unitLevel4 }}</el-descriptions-item>
                         <el-descriptions-item label="所属组织">{{ details?.assetUser?.department || '未分配' }}</el-descriptions-item>
                         <el-descriptions-item label="联系方式">{{ details?.assetUser?.phone || '-' }}</el-descriptions-item>
                         <el-descriptions-item label="最后上报">刚刚</el-descriptions-item>

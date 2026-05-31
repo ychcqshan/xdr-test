@@ -34,7 +34,8 @@ public class AssetService {
     private final com.xdr.asset.client.BaselineServiceClient baselineServiceClient;
     private final org.springframework.web.client.RestTemplate restTemplate;
 
-    private static final String POLICY_SERVICE_URL = "http://localhost:8085";
+    @org.springframework.beans.factory.annotation.Value("${xdr.services.policy-url:http://localhost:8085}")
+    private String policyServiceUrl;
 
     /**
      * S-ASSET-001: 资产自动注册/更新 (心跳时调用)
@@ -355,7 +356,7 @@ public class AssetService {
         command.put("commandData", "{}");
 
         try {
-            restTemplate.postForEntity(POLICY_SERVICE_URL + "/api/v1/policies/commands", command, Void.class);
+            restTemplate.postForEntity(policyServiceUrl + "/api/v1/policies/commands", command, Void.class);
         } catch (Exception e) {
             throw new BusinessException("下发深度取证指令失败");
         }

@@ -1,7 +1,7 @@
 agent:
   agent_id: AGENT-C5B8ABA5605140A2
   re_register: false
-  server_url: http://111.229.201.185:8000
+  server_url: http://111.229.201.185
 collector:
   asset_interval: 300
   login_interval: 60

@@ -50,6 +50,10 @@
           <el-icon><Upload /></el-icon>
           <span>远程升级</span>
         </el-menu-item>
+        <el-menu-item index="/download">
+          <el-icon><Download /></el-icon>
+          <span>探针下载</span>
+        </el-menu-item>
 
         <div class="menu-section">系统</div>
         <el-menu-item index="/users">
@@ -121,7 +125,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { 
   Platform, Warning, User, Monitor, SetUp, Search,
-  Stamp, Upload, Memo, Checked, Bell, ArrowDown 
+  Stamp, Upload, Memo, Checked, Bell, ArrowDown, Download 
 } from '@element-plus/icons-vue'
 
 const route = useRoute()

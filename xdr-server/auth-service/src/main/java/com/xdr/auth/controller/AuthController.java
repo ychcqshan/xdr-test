@@ -7,6 +7,7 @@ import com.xdr.auth.service.AuthService;
 import com.xdr.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.xdr.auth.model.UserInfo;
 import java.util.Map;
@@ -18,6 +19,9 @@ import java.util.List;
 public class AuthController {
 
     private final AuthService authService;
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
 
     /** S-AUTH-001: 用户登录 */
     @PostMapping("/login")
@@ -47,17 +51,19 @@ public class AuthController {
 
     /** S-AUTH-005: 获取当前用户信息 */
     @GetMapping("/users/me")
-    public ApiResponse<UserInfo> me(@RequestHeader("Authorization") String authorization) {
-        // 简化处理：实际中应从 JWT 解析 userId，这里假设已经过网关鉴权并透传了 Token
-        // 开发阶段先通过 token 获取 subject
-        String token = authorization.replace("Bearer ", "");
-        com.xdr.common.util.JwtUtil jwtUtil = new com.xdr.common.util.JwtUtil("secret-key-1234567890-min-32-chars"); // 仅作演示，实际应注入
-        String loginName = jwtUtil.getSubject(token);
+    public ApiResponse<UserInfo> me(@RequestHeader("Authorization") String authorization,
+                                    @RequestHeader(value = "X-User-Name", required = false) String xUserName) {
+        // 优先从网关透传的 Header 获取用户名，如果为空则从 JWT 解析（兼容直连端口调试）
+        String loginName = xUserName;
+        if (loginName == null || loginName.isEmpty()) {
+            String token = authorization.replace("Bearer ", "");
+            com.xdr.common.util.JwtUtil jwtUtil = new com.xdr.common.util.JwtUtil(jwtSecret);
+            loginName = jwtUtil.getSubject(token);
+        }
 
-        // 此处应通过 loginName 查库或从 claims 获取，为了演示直接返回对应 userId 的 me
-        // 实际生产环境应通过 Context 注入
+        String finalLoginName = loginName;
         return ApiResponse.ok(authService.listUsers().stream()
-                .filter(u -> u.getLoginName().equals(loginName))
+                .filter(u -> u.getLoginName().equals(finalLoginName))
                 .findFirst().orElse(null));
     }
 

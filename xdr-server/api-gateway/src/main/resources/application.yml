@@ -9,43 +9,43 @@ spring:
       globalcors:
         corsConfigurations:
           '[/**]':
-            allowedOrigins: "http://localhost:5173"
+            allowedOriginPatterns: "*"
             allowedMethods: "*"
             allowedHeaders: "*"
             allowCredentials: true
       routes:
         - id: auth-service
-          uri: http://localhost:8001
+          uri: http://auth-service:8001
           predicates:
             - Path=/api/v1/auth/**
 
         - id: asset-service
-          uri: http://localhost:8002
+          uri: http://asset-service:8002
           predicates:
             - Path=/api/v1/assets/**,/api/v1/heartbeat/**
 
         - id: baseline-service
-          uri: http://localhost:8003
+          uri: http://baseline-service:8003
           predicates:
             - Path=/api/v1/baselines/**
 
         - id: threat-service
-          uri: http://localhost:8004
+          uri: http://threat-service:8004
           predicates:
             - Path=/api/v1/alerts/**,/api/v1/events/**
 
         - id: policy-service
-          uri: http://localhost:8005
+          uri: http://policy-service:8005
           predicates:
             - Path=/api/v1/policies/**
 
         - id: upgrade-service
-          uri: http://localhost:8006
+          uri: http://upgrade-service:8006
           predicates:
             - Path=/api/v1/upgrades/**
 
         - id: compliance-service
-          uri: http://localhost:8007
+          uri: http://compliance-service:8007
           predicates:
             - Path=/api/v1/compliance/**
 

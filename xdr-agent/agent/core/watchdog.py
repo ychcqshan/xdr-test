@@ -59,3 +59,7 @@ class AgentWatchdog(threading.Thread):
             with open(path, "rb") as f:
                 return hashlib.md5(f.read()).hexdigest()
         except: return ""
+
+    def update_baseline(self):
+        """更新配置基线Hash（当由Agent自行修改配置时调用）"""
+        self._config_hash = self._get_file_hash(self.config_path)

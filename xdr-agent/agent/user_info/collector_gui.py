@@ -28,15 +28,15 @@ class UserInfoCollectorGUI:
         tk.Label(self.root, text="请完善用户信息以完成资产注册", font=("微软雅黑", 12, "bold")).pack(pady=10)
         
         fields = [
-            ("一级单位(集团):", "unitLevel1"),
-            ("二级单位:", "unitLevel2"),
-            ("三级单位:", "unitLevel3"),
-            ("四级单位:", "unitLevel4"),
-            ("所属部门:", "department"),
-            ("用户岗位:", "post"),
-            ("使用人姓名:", "username"),
-            ("手机号:", "phone"),
-            ("常用邮箱:", "email")
+            ("一级单位(必填):", "unitLevel1"),
+            ("二级单位(必填):", "unitLevel2"),
+            ("三级单位(选填):", "unitLevel3"),
+            ("四级单位(选填):", "unitLevel4"),
+            ("所属部门(选填):", "department"),
+            ("用户岗位(选填):", "post"),
+            ("使用人(必填):", "username"),
+            ("手机号(必填):", "phone"),
+            ("常用邮箱(选填):", "email")
         ]
         
         self.entries = {}
@@ -54,9 +54,14 @@ class UserInfoCollectorGUI:
         data = {k: v.get().strip() for k, v in self.entries.items()}
         
         # 简单校验
-        if not data['unitLevel1'] or not data['username'] or not data['phone']:
-            messagebox.showwarning("输入项错误", "单位、姓名和手机号为必填项")
+        if not data['unitLevel1'] or not data['unitLevel2'] or not data['username'] or not data['phone']:
+            messagebox.showwarning("输入项错误", "一级单位、二级单位、姓名和手机号为必填项！")
             return
+            
+        # 自动补齐未填写的选填项
+        for key in ['unitLevel3', 'unitLevel4', 'department', 'post', 'email']:
+            if not data[key]:
+                data[key] = "-"
             
         self.on_submit(data)
         messagebox.showinfo("成功", "资产用户信息已采集并上报")

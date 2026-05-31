@@ -62,6 +62,12 @@ const routes: RouteRecordRaw[] = [
                 meta: { title: '远程升级', icon: 'Upload' },
             },
             {
+                path: 'download',
+                name: 'Download',
+                component: () => import('@/views/download/DownloadView.vue'),
+                meta: { title: '探针下载', icon: 'Download' },
+            },
+            {
                 path: 'users',
                 name: 'Users',
                 component: () => import('@/views/user/UserView.vue'),

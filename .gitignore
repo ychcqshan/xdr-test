@@ -30,4 +30,29 @@ all.sql
 .agent/skills
 *.exe
 
+# Releases
 xdr-agent/build/
+xdr-release-v1.0/
+xdr-release-v1.1/
+
+# Env & Build artifacts
+env-build/
+.env-build/
+venv-build/
+build/
+bin/
+
+
+# Temporary Workspace Files
+*.txt
+*.sql
+BcryptTest.java
+generate_pw.py
+test_hash.py
+check_api.py
+
+# AI / Agent dirs
+.agent/
+.agents/
+.context/
+artifacts/

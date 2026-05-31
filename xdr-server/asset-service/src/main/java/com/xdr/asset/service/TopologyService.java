@@ -22,7 +22,8 @@ public class TopologyService {
     private final ObjectMapper objectMapper;
     private final AssetService assetService;
 
-    private static final String THREAT_SERVICE_URL = "http://localhost:8084";
+    @org.springframework.beans.factory.annotation.Value("${xdr.services.threat-url:http://localhost:8084}")
+    private String threatServiceUrl;
 
     public GraphDTO getNetworkTopology() {
         GraphDTO graph = new GraphDTO();
@@ -44,7 +45,7 @@ public class TopologyService {
             // 2. 获取该Agent的外部连接并构建边
             try {
                 ApiResponse<List<Map<String, Object>>> response = restTemplate.exchange(
-                        THREAT_SERVICE_URL + "/api/v1/host-assets/" + asset.getAgentId(),
+                        threatServiceUrl + "/api/v1/host-assets/" + asset.getAgentId(),
                         HttpMethod.GET,
                         null,
                         new ParameterizedTypeReference<ApiResponse<List<Map<String, Object>>>>() {
