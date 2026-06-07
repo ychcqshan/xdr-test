@@ -18,4 +18,8 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    outDir: '../xdr-release-v1.1/frontend',
+    emptyOutDir: true,
+  },
 })

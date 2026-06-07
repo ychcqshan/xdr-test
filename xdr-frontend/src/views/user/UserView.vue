@@ -169,7 +169,7 @@
 import { ref } from 'vue'
 import { 
   Share, Plus, User, Search, Folder, FolderOpened, 
-  EditPen, Delete, MoreFilled 
+  EditPen, Delete, MoreFilled, Filter, Edit
 } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 

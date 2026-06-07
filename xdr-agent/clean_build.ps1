@@ -13,7 +13,14 @@ if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
 Write-Host "4. Starting clean PyInstaller build..." -ForegroundColor Cyan
 .\venv-build\Scripts\pyinstaller.exe xdr-agent-win.spec --clean
 
-Write-Host "5. Copying external configuration..." -ForegroundColor Cyan
-Copy-Item "config.yaml" -Destination "dist\config.yaml" -Force
+Write-Host "5. Copying output to release directory..." -ForegroundColor Cyan
+$releaseDir = "..\xdr-release-v1.1"
+if (-Not (Test-Path "$releaseDir\agent")) { New-Item -ItemType Directory -Force "$releaseDir\agent" }
+if (-Not (Test-Path "$releaseDir\frontend\downloads")) { New-Item -ItemType Directory -Force "$releaseDir\frontend\downloads" }
+
+Copy-Item "dist\xdr-agent-win.exe" -Destination "$releaseDir\agent\xdr-agent-win.exe" -Force
+Copy-Item "config.yaml" -Destination "$releaseDir\agent\config.yaml" -Force
+
+Copy-Item "dist\xdr-agent-win.exe" -Destination "$releaseDir\frontend\downloads\xdr-agent-win.exe" -Force
 
 Write-Host "Clean build complete! Size and speed should be greatly optimized." -ForegroundColor Green

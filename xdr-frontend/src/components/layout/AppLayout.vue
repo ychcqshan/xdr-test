@@ -124,7 +124,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { 
-  Platform, Warning, User, Monitor, SetUp, Search,
+  Menu as IconMenu, Platform, Warning, User, Monitor, SetUp, Search,
   Stamp, Upload, Memo, Checked, Bell, ArrowDown, Download 
 } from '@element-plus/icons-vue'
 
