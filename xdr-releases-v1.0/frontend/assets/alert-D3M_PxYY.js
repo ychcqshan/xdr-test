@@ -1,0 +1,1 @@
+import{r as e}from"./request-CL1Je-2d.js";function a(t){return e.get("/alerts",{params:t})}function u(t,r){return e.put(`/alerts/${t}/status`,r)}function n(){return e.get("/alerts/stats")}export{a,n as g,u};

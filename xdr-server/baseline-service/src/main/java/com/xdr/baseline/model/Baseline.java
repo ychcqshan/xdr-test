@@ -20,5 +20,7 @@ public class Baseline extends BaseEntity {
     private Integer learningDurationHours;
     private String unitLevel1;
     private String unitLevel2;
+    private String unitLevel3;
+    private String unitLevel4;
     private String responsiblePerson;
 }

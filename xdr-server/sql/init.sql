@@ -105,7 +105,8 @@ CREATE TABLE IF NOT EXISTS host_asset_record (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE INDEX idx_agent_fp (agent_id, asset_type, asset_fingerprint),
-    INDEX idx_status_time (status, last_updated)
+    INDEX idx_status_time (status, last_updated),
+    INDEX idx_agent_time (agent_id, first_seen, last_updated)
 );
 
 -- =============================================
@@ -122,6 +123,11 @@ CREATE TABLE IF NOT EXISTS baseline (
     learning_start DATETIME,
     learning_end DATETIME,
     learning_duration_hours INT COMMENT '学习时长(小时)',
+    unit_level1 VARCHAR(100),
+    unit_level2 VARCHAR(100),
+    unit_level3 VARCHAR(100),
+    unit_level4 VARCHAR(100),
+    responsible_person VARCHAR(50),
     deleted INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -159,6 +165,13 @@ CREATE TABLE IF NOT EXISTS alert (
     resolved_at DATETIME,
     resolved_by VARCHAR(50),
     resolve_comment TEXT,
+    response_status VARCHAR(20) COMMENT 'PENDING / EXECUTED / FAILED / CANCELED',
+    response_action VARCHAR(50) COMMENT 'ISOLATE / TERMINATE_PROCESS / DELETE_FILE',
+    unit_level1 VARCHAR(100),
+    unit_level2 VARCHAR(100),
+    unit_level3 VARCHAR(100),
+    unit_level4 VARCHAR(100),
+    responsible_person VARCHAR(50),
     deleted INT NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

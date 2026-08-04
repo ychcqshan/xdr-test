@@ -45,7 +45,7 @@
 
       <div class="login-footer">
         <p>系统访问受限，仅限经授权的专业人员使用。</p>
-        <p class="account-hint">演示账号: admin / admin123</p>
+        <p class="account-hint">演示账号: admin / admin</p>
       </div>
     </div>
   </div>

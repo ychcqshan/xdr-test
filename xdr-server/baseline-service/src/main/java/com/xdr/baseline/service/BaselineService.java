@@ -70,7 +70,7 @@ public class BaselineService {
     /**
      * S-BL-010: 获取基线列表(分页演示，Phase 2 暂做全量)
      */
-    public List<Baseline> listBaselines(String type, String unitLevel1, String unitLevel2, String responsiblePerson) {
+    public List<Baseline> listBaselines(String type, String unitLevel1, String unitLevel2, String unitLevel3, String unitLevel4, String responsiblePerson) {
         LambdaQueryWrapper<Baseline> query = new LambdaQueryWrapper<>();
         if (type != null && !type.isEmpty() && !"ALL".equals(type)) {
             query.eq(Baseline::getType, type);
@@ -80,6 +80,12 @@ public class BaselineService {
         }
         if (unitLevel2 != null && !unitLevel2.isEmpty()) {
             query.eq(Baseline::getUnitLevel2, unitLevel2);
+        }
+        if (unitLevel3 != null && !unitLevel3.isEmpty()) {
+            query.eq(Baseline::getUnitLevel3, unitLevel3);
+        }
+        if (unitLevel4 != null && !unitLevel4.isEmpty()) {
+            query.eq(Baseline::getUnitLevel4, unitLevel4);
         }
         if (responsiblePerson != null && !responsiblePerson.isEmpty()) {
             query.eq(Baseline::getResponsiblePerson, responsiblePerson);

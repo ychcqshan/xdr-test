@@ -101,7 +101,8 @@ public class AlertService {
      * S-THR-012: 告警列表(分页+筛选)
      */
     public PageResponse<Alert> listAlerts(int page, int size, String level,
-            String status, String agentId, String threatType, String unitLevel1, String unitLevel2, String responsiblePerson) {
+            String status, String agentId, String threatType, String unitLevel1, String unitLevel2, 
+            String unitLevel3, String unitLevel4, String responsiblePerson) {
         QueryWrapper<Alert> query = new QueryWrapper<>();
 
         if (StringUtils.hasText(level))
@@ -116,6 +117,10 @@ public class AlertService {
             query.eq("unit_level1", unitLevel1);
         if (StringUtils.hasText(unitLevel2))
             query.eq("unit_level2", unitLevel2);
+        if (StringUtils.hasText(unitLevel3))
+            query.eq("unit_level3", unitLevel3);
+        if (StringUtils.hasText(unitLevel4))
+            query.eq("unit_level4", unitLevel4);
         if (StringUtils.hasText(responsiblePerson))
             query.eq("responsible_person", responsiblePerson);
 

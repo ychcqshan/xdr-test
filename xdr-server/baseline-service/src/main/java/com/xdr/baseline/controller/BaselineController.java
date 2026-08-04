@@ -23,8 +23,10 @@ public class BaselineController {
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String unitLevel1,
             @RequestParam(required = false) String unitLevel2,
+            @RequestParam(required = false) String unitLevel3,
+            @RequestParam(required = false) String unitLevel4,
             @RequestParam(required = false) String responsiblePerson) {
-        return ApiResponse.ok(baselineService.listBaselines(type, unitLevel1, unitLevel2, responsiblePerson));
+        return ApiResponse.ok(baselineService.listBaselines(type, unitLevel1, unitLevel2, unitLevel3, unitLevel4, responsiblePerson));
     }
 
     /** S-BL-001/002/003: 启动基线学习 */

@@ -27,5 +27,7 @@ public class Alert extends BaseEntity {
     private String responseAction; // ISOLATE / TERMINATE_PROCESS / DELETE_FILE
     private String unitLevel1;
     private String unitLevel2;
+    private String unitLevel3;
+    private String unitLevel4;
     private String responsiblePerson;
 }
